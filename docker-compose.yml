@@ -8,7 +8,6 @@ services:
       - INFLUXDB_PORT=8086
     env_file:
       - ./webscraper/.env
-    command: /bin/sh -c "while true ; do pipenv run python3 /app/main.py ; sleep 15 ; done"
     depends_on:
       - influxdb
   influxdb:
