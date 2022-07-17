@@ -29,8 +29,8 @@ services:
       - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
     ports:
       - "8086:8086"
-    # volumes:
-    #   - ./influxdb:/var/lib/influxdb
+    volumes:
+      - ./influxdb:/var/lib/influxdb2
     restart: always
     networks:
       - local
