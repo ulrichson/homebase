@@ -4,6 +4,7 @@ import urllib.parse
 from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 
+import pytz
 import requests
 from influxdb_client import InfluxDBClient, Point, WritePrecision
 from influxdb_client.client.write_api import SYNCHRONOUS
@@ -62,14 +63,14 @@ def scrape(day):
         map(lambda t: {
             'measurement': 'meteredPeakDemands',
             'tags': {'meterId': os.environ['METER_ID']},
-            'time': t['time'],
+            'time': pytz.timezone(os.environ['TIMEZONE']).localize(datetime.strptime(t['time'], "%Y-%m-%dT%H:%M:%S"), is_dst=None).astimezone(pytz.utc),
             'fields': {'value': json_respons['meteredPeakDemands'][t['index']]}
         }, times)
     ) + list(
         map(lambda t: {
             'measurement': 'meteredValues',
             'tags': {'meterId': os.environ['METER_ID']},
-            'time': t['time'],
+            'time': pytz.timezone(os.environ['TIMEZONE']).localize(datetime.strptime(t['time'], "%Y-%m-%dT%H:%M:%S"), is_dst=None).astimezone(pytz.utc),
             'fields': {'value': json_respons['meteredValues'][t['index']]}
         }, times)
     )
