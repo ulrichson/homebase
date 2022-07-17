@@ -6,13 +6,11 @@ from datetime import datetime
 import requests
 from influxdb import InfluxDBClient
 
+api_base_url = 'https://smartmeter.netz-noe.at/orchestration/'
+db_name = 'smartmeter'
 
-def main():
-    api_base_url = 'https://smartmeter.netz-noe.at/orchestration/'
-    db_name = 'smartmeter'
-    day = os.environ['DAY'] if 'DAY' in os.environ else datetime.now().strftime(
-        '%Y-%-m-%-d')
-    logging.getLogger().setLevel(logging.INFO)
+
+def scrape(day):
     session = requests.Session()
     response = session.post(
         api_base_url + 'Authentication/Login',
@@ -22,8 +20,7 @@ def main():
         }
     )
     if response.status_code != 200:
-        logging.error('Login failed')
-        exit(1)
+        raise Exception('Login failed')
 
     logging.info('Login successful')
 
@@ -34,15 +31,14 @@ def main():
 
     if response.status_code != 200:
         session.get(api_base_url + 'Authentication/Logout')
-        logging.error('Fetching meter data failed')
-        exit(1)
+        raise Exception('Fetching meter data failed')
 
     json = response.json()
 
     if not 'peakDemandTimes' in json or len(json['peakDemandTimes']) == 0:
         session.get(api_base_url + 'Authentication/Logout')
         logging.warning(f"No measurement data for {day}")
-        exit(1)
+        return False
 
     client = InfluxDBClient(
         host=os.environ['INFLUXDB_HOST'],
@@ -79,6 +75,18 @@ def main():
         logging.info('Stored measurements in DB')
 
     session.get(api_base_url + 'Authentication/Logout')
+    return True
+
+
+def main():
+    day = os.environ['DAY'] if 'DAY' in os.environ else datetime.now().strftime(
+        '%Y-%-m-%-d')
+    logging.getLogger().setLevel(logging.INFO)
+    try:
+        scrape(day)
+    except Exception as err:
+        logging.error(err)
+        exit(1)
 
 
 if __name__ == '__main__':
