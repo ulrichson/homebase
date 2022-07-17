@@ -1,0 +1,5 @@
+.env
+grafana/data
+influxdb/data
+influxdb/meta
+influxdb/wal
