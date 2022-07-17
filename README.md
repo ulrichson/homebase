@@ -10,5 +10,8 @@ Raspberry Pi based home monitoring dashboard
 USERNAME=...
 PASSWORD=...
 METER_ID=...
-# DAY=2022-7-16
 ```
+
+## Run
+
+`docker-compose up --build`

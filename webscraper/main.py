@@ -1,17 +1,18 @@
 import logging
 import os
 import urllib.parse
-from datetime import datetime
+from argparse import ArgumentParser
+from datetime import date, datetime, timedelta
 
 import requests
 from influxdb import InfluxDBClient
 
 api_base_url = 'https://smartmeter.netz-noe.at/orchestration/'
 db_name = 'smartmeter'
+session = requests.Session()
 
 
-def scrape(day):
-    session = requests.Session()
+def login():
     response = session.post(
         api_base_url + 'Authentication/Login',
         json={
@@ -24,19 +25,27 @@ def scrape(day):
 
     logging.info('Login successful')
 
+
+def logout():
+    response = session.get(api_base_url + 'Authentication/Logout')
+    if response.status_code != 200:
+        raise Exception('Logout failed')
+
+    logging.info('Logout successful')
+
+
+def scrape(day):
     response = session.get(
         api_base_url +
         f"ConsumptionRecord/Day?meterId={urllib.parse.quote(os.environ['METER_ID'])}&day={day}"
     )
 
     if response.status_code != 200:
-        session.get(api_base_url + 'Authentication/Logout')
         raise Exception('Fetching meter data failed')
 
     json = response.json()
 
     if not 'peakDemandTimes' in json or len(json['peakDemandTimes']) == 0:
-        session.get(api_base_url + 'Authentication/Logout')
         logging.warning(f"No measurement data for {day}")
         return False
 
@@ -53,6 +62,7 @@ def scrape(day):
 
     times = [{'time': x, 'index': i}
              for i, x in enumerate(json['peakDemandTimes'])]
+
     if client.write_points(
         list(
             map(lambda t: {
@@ -72,21 +82,49 @@ def scrape(day):
             }, times)
         )
     ):
-        logging.info('Stored measurements in DB')
+        logging.info(f"Stored measurements in DB for {day}")
 
-    session.get(api_base_url + 'Authentication/Logout')
     return True
 
 
 def main():
-    day = os.environ['DAY'] if 'DAY' in os.environ else datetime.now().strftime(
-        '%Y-%-m-%-d')
     logging.getLogger().setLevel(logging.INFO)
-    try:
-        scrape(day)
-    except Exception as err:
-        logging.error(err)
-        exit(1)
+    parser = ArgumentParser()
+    parser.add_argument('-m', '--migrate', default=False,
+                        action='store_true', help='Migrate old measurement data into DB')
+    args = parser.parse_args()
+
+    login()
+    if (args.migrate):
+        delta_days = 1
+        has_next = True
+        max_attempts = 3
+        attempts: 0
+        while has_next:
+            day = (date.today() - timedelta(days=delta_days)
+                   ).strftime('%Y-%-m-%-d')
+            try:
+                if not scrape(day):
+                    attempts += 1
+                else:
+                    delta_days += 1
+                    attempts = 0
+            except Exception as err:
+                attempts += 1
+                logging.error(err)
+
+            if (attempts >= max_attempts):
+                logging.info(
+                    'Stopping migration since no more data is present')
+                has_next = False
+    else:
+        try:
+            scrape(datetime.now().strftime('%Y-%-m-%-d'))
+        except Exception as err:
+            logging.error(err)
+            exit(1)
+
+    logout()
 
 
 if __name__ == '__main__':
