@@ -43,9 +43,9 @@ def scrape(day):
     if response.status_code != 200:
         raise Exception('Fetching meter data failed')
 
-    json = response.json()
+    json_respons = response.json()
 
-    if not 'peakDemandTimes' in json or len(json['peakDemandTimes']) == 0:
+    if not 'peakDemandTimes' in json_respons or len(json_respons['peakDemandTimes']) == 0:
         logging.warning(f"No measurement data for {day}")
         return False
 
@@ -61,27 +61,25 @@ def scrape(day):
     client.switch_database(db_name)
 
     times = [{'time': x, 'index': i}
-             for i, x in enumerate(json['peakDemandTimes'])]
+             for i, x in enumerate(json_respons['peakDemandTimes'])]
 
-    if client.write_points(
-        list(
-            map(lambda t: {
-                'measurement': 'meteredPeakDemands',
-                'tags': {'meterId': os.environ['METER_ID']},
-                'time': t['time'],
-                'fields': {'value': json['meteredPeakDemands'][t['index']]}
-            }, times)
-        )
-        +
-        list(
-            map(lambda t: {
-                'measurement': 'meteredValues',
-                'tags': {'meterId': os.environ['METER_ID']},
-                'time': t['time'],
-                'fields': {'value': json['meteredValues'][t['index']]}
-            }, times)
-        )
-    ):
+    data = list(
+        map(lambda t: {
+            'measurement': 'meteredPeakDemands',
+            'tags': {'meterId': os.environ['METER_ID']},
+            'time': t['time'],
+            'fields': {'value': json_respons['meteredPeakDemands'][t['index']]}
+        }, times)
+    ) + list(
+        map(lambda t: {
+            'measurement': 'meteredValues',
+            'tags': {'meterId': os.environ['METER_ID']},
+            'time': t['time'],
+            'fields': {'value': json_respons['meteredValues'][t['index']]}
+        }, times)
+    )
+
+    if client.write_points(data):
         logging.info(f"Stored measurements in DB for {day}")
 
     return True
