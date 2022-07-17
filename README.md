@@ -19,3 +19,16 @@ METER_ID=...
 ## Migrate Data
 
 `docker compose run --rm webscraper pipenv run python3 main.py --migrate`
+
+## Grafana
+
+Query data with:
+
+```
+from(bucket: "smartmeter")
+  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+```
