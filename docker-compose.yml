@@ -5,20 +5,34 @@ services:
     build: ./webscraper
     container_name: webscraper
     environment:
-      - INFLUXDB_HOST=influxdb
-      - INFLUXDB_PORT=8086
+      - INFLUX_URL=http://influxdb:8086
+      - INFLUX_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
+      - INFLUX_ORG=ulrichlehner
+      - INFLUX_BUCKET=smartmeter
     env_file:
       - ./webscraper/.env
     depends_on:
       - influxdb
+    restart: always
+    networks:
+      - local
   influxdb:
-    image: influxdb:1.8-alpine
+    image: influxdb:2.3-alpine
     container_name: influxdb
-    platform: linux/amd64 # Only needed when running on Apple Silicon
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=e6bWQWSAeIkKOCYDm2WJbuaXLyGhOGO
+      - DOCKER_INFLUXDB_INIT_ORG=ulrichlehner
+      - DOCKER_INFLUXDB_INIT_BUCKET=smartmeter
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
     ports:
       - "8086:8086"
     volumes:
       - ./influxdb:/var/lib/influxdb
+    restart: always
+    networks:
+      - local
   grafana:
     image: grafana/grafana-oss:9.0.3
     container_name: grafana
@@ -28,3 +42,9 @@ services:
       - ./grafana/data:/var/lib/grafana
     depends_on:
       - influxdb
+    restart: always
+    networks:
+      - local
+
+networks:
+  local:

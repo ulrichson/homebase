@@ -5,10 +5,10 @@ from argparse import ArgumentParser
 from datetime import date, datetime, timedelta
 
 import requests
-from influxdb import InfluxDBClient
+from influxdb_client import InfluxDBClient, Point, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS
 
 api_base_url = 'https://smartmeter.netz-noe.at/orchestration/'
-db_name = 'smartmeter'
 session = requests.Session()
 
 
@@ -50,15 +50,10 @@ def scrape(day):
         return False
 
     client = InfluxDBClient(
-        host=os.environ['INFLUXDB_HOST'],
-        port=os.environ['INFLUXDB_PORT']
+        url=os.environ['INFLUX_URL'],
+        token=os.environ['INFLUX_TOKEN'],
+        org=os.environ['INFLUX_ORG']
     )
-
-    if not db_name in list(map(lambda db: db['name'], client.get_list_database())):
-        client.create_database(db_name)
-        logging.info(f"Created DB '{db_name}'")
-
-    client.switch_database(db_name)
 
     times = [{'time': x, 'index': i}
              for i, x in enumerate(json_respons['peakDemandTimes'])]
@@ -79,7 +74,13 @@ def scrape(day):
         }, times)
     )
 
-    if client.write_points(data):
+    write_api = client.write_api(write_options=SYNCHRONOUS)
+    if write_api.write(
+        bucket=os.environ['INFLUX_BUCKET'],
+        org=os.environ['INFLUX_ORG'],
+        write_precision=WritePrecision.S,
+        record=data
+    ) is None:
         logging.info(f"Stored measurements in DB for {day}")
 
     return True
@@ -97,7 +98,7 @@ def main():
         delta_days = 1
         has_next = True
         max_attempts = 3
-        attempts: 0
+        attempts = 0
         while has_next:
             day = (date.today() - timedelta(days=delta_days)
                    ).strftime('%Y-%-m-%-d')
