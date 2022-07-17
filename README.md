@@ -15,3 +15,7 @@ METER_ID=...
 ## Run
 
 `docker-compose up --build`
+
+## Migrate Data
+
+`docker compose run webscraper pipenv run python3 main.py --migrate`
