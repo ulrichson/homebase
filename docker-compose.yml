@@ -3,6 +3,7 @@ version: "3.9"
 services:
   webscraper:
     build: ./webscraper
+    container_name: webscraper
     environment:
       - INFLUXDB_HOST=influxdb
       - INFLUXDB_PORT=8086
@@ -12,6 +13,7 @@ services:
       - influxdb
   influxdb:
     image: influxdb:1.8-alpine
+    container_name: influxdb
     platform: linux/amd64 # Only needed when running on Apple Silicon
     ports:
       - "8086:8086"
@@ -19,6 +21,7 @@ services:
       - ./influxdb:/var/lib/influxdb
   grafana:
     image: grafana/grafana-oss:9.0.3
+    container_name: grafana
     ports:
       - "3000:3000"
     volumes:
