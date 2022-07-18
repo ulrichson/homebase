@@ -35,7 +35,7 @@ def logout():
     logging.info('Logout successful')
 
 
-def scrape(day):
+def load(day):
     response = session.get(
         api_base_url +
         f"ConsumptionRecord/Day?meterId={urllib.parse.quote(os.environ['METER_ID'])}&day={day}"
@@ -87,6 +87,30 @@ def scrape(day):
     return True
 
 
+def migrate():
+    delta_days = 1
+    has_next = True
+    max_attempts = 3
+    attempts = 0
+    while has_next:
+        day = (date.today() - timedelta(days=delta_days)
+               ).strftime('%Y-%-m-%-d')
+        try:
+            if not load(day):
+                attempts += 1
+            else:
+                delta_days += 1
+                attempts = 0
+        except Exception as err:
+            attempts += 1
+            logging.error(err)
+
+        if (attempts >= max_attempts):
+            logging.info(
+                'Stopping migration since no more data is present')
+            has_next = False
+
+
 def main():
     logging.getLogger().setLevel(logging.INFO)
     parser = ArgumentParser()
@@ -96,33 +120,12 @@ def main():
 
     login()
     if (args.migrate):
-        delta_days = 1
-        has_next = True
-        max_attempts = 3
-        attempts = 0
-        while has_next:
-            day = (date.today() - timedelta(days=delta_days)
-                   ).strftime('%Y-%-m-%-d')
-            try:
-                if not scrape(day):
-                    attempts += 1
-                else:
-                    delta_days += 1
-                    attempts = 0
-            except Exception as err:
-                attempts += 1
-                logging.error(err)
-
-            if (attempts >= max_attempts):
-                logging.info(
-                    'Stopping migration since no more data is present')
-                has_next = False
+        migrate()
     else:
         try:
-            scrape(datetime.now().strftime('%Y-%-m-%-d'))
+            load(datetime.now().strftime('%Y-%-m-%-d'))
         except Exception as err:
             logging.error(err)
-            exit(1)
 
     logout()
 
