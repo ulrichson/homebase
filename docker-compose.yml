@@ -1,9 +1,9 @@
 version: "3.9"
 
 services:
-  webscraper:
-    build: ./webscraper
-    container_name: webscraper
+  databot:
+    build: ./databot
+    container_name: databot
     environment:
       - INFLUX_URL=http://influxdb:8086
       - INFLUX_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
@@ -11,7 +11,7 @@ services:
       - INFLUX_BUCKET=smartmeter
       - TIMEZONE=Europe/Vienna
     env_file:
-      - ./webscraper/.env
+      - ./databot/.env
     depends_on:
       - influxdb
     restart: always

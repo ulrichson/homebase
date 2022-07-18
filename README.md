@@ -4,7 +4,7 @@ Raspberry Pi based home monitoring dashboard
 
 ## Setup
 
-### `./webscraper/.env`
+### `./databot/.env`
 
 ```bash
 USERNAME=...
@@ -18,7 +18,7 @@ METER_ID=...
 
 ## Migrate Data
 
-`docker compose run --rm webscraper pipenv run python3 main.py --migrate`
+`docker compose run --rm databot pipenv run python3 main.py --migrate`
 
 ## Grafana
 
