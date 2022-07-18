@@ -24,15 +24,6 @@ Raspberry Pi based home monitoring dashboard
    sudo dpkg-reconfigure -plow unattended-upgrades
    ```
 
-   This script should look as follows
-
-   ```bash
-   #!/bin/bash
-   apt-get update
-   apt-get upgrade -y
-   apt-get autoclean
-   ```
-
 ### App
 
 Clone this repo and create a `./.env` in the app folder with following content:
