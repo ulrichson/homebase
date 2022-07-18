@@ -17,6 +17,21 @@ Raspberry Pi based home monitoring dashboard
    sudo usermod -aG docker ${USER}
    ```
 
+3. (Optional) Make Raspian OS auto-update itself (inspired by [How to setup Raspberry Pi as home server with Docker support](https://blog.anoff.io/2020-12-install-docker-raspi/))
+
+   ```bash
+   sudo touch /etc/cron.weekly/autoupdate && sudo chmod 755 /etc/cron.weekly/autoupdate
+   ```
+
+   This script should look as follows
+
+   ```bash
+   #!/bin/bash
+   apt-get update
+   apt-get upgrade -y
+   apt-get autoclean
+   ```
+
 ### App
 
 Clone this repo and create a `./.env` in the app folder with following content:
