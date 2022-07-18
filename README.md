@@ -6,8 +6,8 @@ Raspberry Pi based home monitoring dashboard
 
 ### Raspberry Pi
 
-1. Install `Raspian OS`
-2. Install `Docker` (see [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script) for latest instructions, at this time the _Install using the convenience script_ section must be used for Raspberry Pi)
+1. Install `Raspberry Pi OS Lite (64-Bit)`
+2. Install `Docker` (see [Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/#install-using-the-convenience-script) for latest instructions, at this time the _Install using the convenience script_ section must be used for Raspberry Pi):
 
    ```bash
    curl -fsSL https://get.docker.com -o get-docker.sh
@@ -17,7 +17,9 @@ Raspberry Pi based home monitoring dashboard
    sudo usermod -aG docker ${USER}
    ```
 
-### `./.env`
+### App
+
+Clone this repo and create a `./.env` in the app folder with following content:
 
 ```bash
 USERNAME=...
@@ -38,11 +40,17 @@ The variables `INFLUX_BUCKET` and `DOCKER_INFLUXDB_INIT_BUCKET` must have the sa
 
 ## Run
 
-`docker compose up --build`
+```bash
+docker compose up --build
+```
 
-## Migrate Data
+## Manually migrate data
 
-`docker compose run --rm databot pipenv run python3 main.py --migrate`
+Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
+
+```bash
+docker compose run --rm databot pipenv run python3 main.py --migrate
+```
 
 ## Grafana
 
