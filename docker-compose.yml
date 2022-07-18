@@ -6,12 +6,8 @@ services:
     container_name: databot
     environment:
       - INFLUX_URL=http://influxdb:8086
-      - INFLUX_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
-      - INFLUX_ORG=ulrichlehner
-      - INFLUX_BUCKET=smartmeter
-      - TIMEZONE=Europe/Vienna
     env_file:
-      - ./databot/.env
+      - ./.env
     depends_on:
       - influxdb
     restart: always
@@ -22,11 +18,8 @@ services:
     container_name: influxdb
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=e6bWQWSAeIkKOCYDm2WJbuaXLyGhOGO
-      - DOCKER_INFLUXDB_INIT_ORG=ulrichlehner
-      - DOCKER_INFLUXDB_INIT_BUCKET=smartmeter
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=ONJtSJuo7VXGjUjV80Xs44GGqxnyQHu
+    env_file:
+      - ./.env
     ports:
       - "8086:8086"
     volumes:
