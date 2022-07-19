@@ -147,14 +147,17 @@ def main():
                         action='store_true', help='Migrate old measurement data into DB')
     args = parser.parse_args()
 
-    login()
+    try:
+        login()
 
-    if (args.migrate):
-        migrate()
-    else:
-        update()
+        if (args.migrate):
+            migrate()
+        else:
+            update()
 
-    logout()
+        logout()
+    except Exception as err:
+        logging.error(err)
 
 
 if __name__ == '__main__':
