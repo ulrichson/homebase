@@ -61,7 +61,7 @@ docker compose run --rm databot pipenv run python3 main.py --migrate
 
 ## Grafana
 
-Query data with:
+Query all data:
 
 ```
 from(bucket: "smartmeter")
@@ -70,4 +70,16 @@ from(bucket: "smartmeter")
     r._measurement == "meteredValues" and
     r._field == "value"
   )
+```
+
+Split in 6h time windows:
+
+```
+from(bucket: "smartmeter")
+  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+  |> aggregateWindow(every: 6h, offset: -2h, fn: mean)
 ```
