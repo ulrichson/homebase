@@ -14,7 +14,7 @@ date_format = '%Y-%m-%d'
 
 # Load environment variables
 meter_id = os.environ['METER_ID']
-tz = os.environ['TIMEZONE']
+tz = os.environ['TZ']
 bucket = os.environ['INFLUX_BUCKET']
 org = os.environ['INFLUX_ORG']
 token = os.environ['INFLUX_TOKEN']
