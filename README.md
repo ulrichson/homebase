@@ -56,7 +56,7 @@ docker compose up --build
 Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
 
 ```bash
-docker compose run --rm databot pipenv run python3 main.py --migrate
+docker compose run --rm databot pipenv run python3 load.py --migrate
 ```
 
 ## Grafana
@@ -81,5 +81,16 @@ from(bucket: "smartmeter")
     r._measurement == "meteredValues" and
     r._field == "value"
   )
-  |> aggregateWindow(every: 6h, offset: -2h, fn: mean)
+  |> aggregateWindow(every: 6h, offset: -12h, fn: mean)
+```
+
+```
+from(bucket: "smartmeter")
+  |> range(start: time(v: "2022-07-10T23:45:00Z"), stop: time(v: "2022-07-18T00:00:00Z"))
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+  //|> aggregateWindow(every: 6h, createEmpty: false, offset: -12h, fn: mean)
+  //|> count()
 ```
