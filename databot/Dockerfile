@@ -16,6 +16,6 @@ RUN chmod 0644 /app/*.sh
 RUN chmod +x /app/start.sh
 
 # Load and render smartmeter data every 5 minutes
-RUN crontab -l | { cat; echo "*/1 * * * * /bin/bash /app/databot_cron.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
+RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/databot_cron.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
 CMD [ "/app/start.sh" ]
