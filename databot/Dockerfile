@@ -1,13 +1,21 @@
-FROM python:3.9-alpine
+FROM python:3.9-slim
+
+RUN apt-get update && apt-get install -y \
+    # build-essential 
+    make \
+    gcc \
+    cron
 
 COPY Pipfile Pipfile.lock /app/
 COPY *.py /app/
+COPY *.sh /app
 WORKDIR /app
 RUN python -m pip install --upgrade pip
 RUN pip install pipenv && pipenv install
+RUN chmod 0644 /app/*.sh
+RUN chmod +x /app/start.sh
 
-# Scrape smartmeter data every 5 minutes
-RUN echo '*/5  *  *  *  *  cd /app && pipenv run python3 /app/load.py && pipenv run python3 /app/render.py' > /etc/crontabs/root
+# Load and render smartmeter data every 5 minutes
+RUN crontab -l | { cat; echo "*/1 * * * * /bin/bash /app/databot_cron.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
-# Run `crond -f` in foreground 
-CMD [ "/usr/sbin/crond", "-f" ]
+CMD [ "/app/start.sh" ]

@@ -143,6 +143,8 @@ def main():
         plt.savefig('export/current.png', dpi=100)
         # plt.show()
 
+        logging.info('Rendered latest chart')
+
     except Exception as err:
         logging.error(err)
         exit(1)
