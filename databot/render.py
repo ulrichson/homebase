@@ -109,6 +109,8 @@ def add_values(idx, values, axs, ylabel):
 
 def main():
     logging.getLogger().setLevel(logging.INFO)
+    logging.basicConfig(
+        format='[ %(asctime)s %(levelname)s ]\t%(message)s')
 
     try:
         # Make it appear a little differen
