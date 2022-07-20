@@ -113,6 +113,8 @@ def main():
         format='[ %(asctime)s %(levelname)s ]\t%(message)s')
 
     try:
+        logging.info('Rendering chart started')
+
         # Make it appear a little differen
         matplotlib.rcParams['font.family'] = ['monospace']
         matplotlib.rcParams['font.size'] = 8
@@ -145,7 +147,7 @@ def main():
         plt.savefig('export/current.png', dpi=100)
         # plt.show()
 
-        logging.info('Rendered latest chart')
+        logging.info('Rendering chart done')
 
     except Exception as err:
         logging.error(err)
