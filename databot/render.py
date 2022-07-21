@@ -95,16 +95,16 @@ def add_values(idx, values, axs, ylabel):
     axs[idx].set_xticks(x_label_locations, labels)
 
     axs[idx].bar_label(rects1, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=8, fontweight='normal')
+                       fmt='%.0f', fontsize=4, fontweight='normal')
     axs[idx].bar_label(rects2, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=8, fontweight='normal')
+                       fmt='%.0f', fontsize=4, fontweight='normal')
     axs[idx].bar_label(rects3, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=8, fontweight='normal')
+                       fmt='%.0f', fontsize=4, fontweight='normal')
     axs[idx].bar_label(rects4, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=8, fontweight='normal')
+                       fmt='%.0f', fontsize=4, fontweight='normal')
 
     # Avoid that yaxix label sticks on the border
-    axs[idx].yaxis.set_label_coords(-0.1, 0.5)
+    # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
 
 
 def main():
@@ -117,7 +117,7 @@ def main():
 
         # Make it appear a little differen
         matplotlib.rcParams['font.family'] = ['monospace']
-        matplotlib.rcParams['font.size'] = 8
+        matplotlib.rcParams['font.size'] = 6
         matplotlib.rcParams['font.weight'] = 'bold'
 
         # Plot data
@@ -132,11 +132,7 @@ def main():
                    axs=axs, ylabel='Vorletzte Woche')
 
         axs[2].legend(loc='upper center', bbox_to_anchor=(
-            0.5, -0.2), ncol=4, frameon=False)
-
-        fig.suptitle('Stromverbrauch (Wh)')
-        fig.tight_layout()
-        fig.set_size_inches(6, 8)
+            0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
 
         # Remove `0` tick to avoid layout collisions with neighbor charts
         for ax in axs:
@@ -144,7 +140,15 @@ def main():
             ax.yaxis.get_major_ticks()[0].tick1line.set_visible(False)
 
         os.makedirs('export', exist_ok=True)
-        plt.savefig('export/current.png', dpi=100)
+
+        fig.suptitle('Stromverbrauch (Wh)')
+        # fig.tight_layout()
+        fig.subplots_adjust(top=0.95)
+
+        # Kindle Paperwhite has native resolution of 1024 x 768 px @ 212 dpi
+        dpi = 212
+        fig.set_size_inches(768 / dpi, 1024 / dpi)
+        plt.savefig('export/current.png', dpi=dpi)
         # plt.show()
 
         logging.info('Rendering chart done')
