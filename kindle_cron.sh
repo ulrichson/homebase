@@ -2,6 +2,8 @@
 
 KINDLE_IP=192.168.15.244
 
+ifconfig usb0 192.168.15.201
+
 script_path=$(dirname "$(readlink -f "$0")")
 
 # Disable Kindle services
@@ -21,5 +23,5 @@ ssh root@$KINDLE_IP /sbin/stop powerd # Should prevent screensaver and backgroun
 # stop stackdumpd
 
 # Display chart on Kindle
-scp "${script_path}/export/current.png" root@$KINDLE_IP:/var/tmp/root
+scp "${script_path}/data/databot/current.png" root@$KINDLE_IP:/var/tmp/root
 ssh root@$KINDLE_IP /usr/sbin/eips -f -g /var/tmp/root/current.png
