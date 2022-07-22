@@ -146,9 +146,10 @@ def main():
         # fig.tight_layout()
         fig.subplots_adjust(top=0.95)
 
-        # Kindle Paperwhite has native resolution of 1024 x 768 px @ 212 dpi
+        # Kindle Paperwhite has native resolution of 1024 x 758 px @ 212 dpi
         dpi = 212
-        fig.set_size_inches(768 / dpi, 1024 / dpi)
+        # Some buffer needed to actually get 758w ...
+        fig.set_size_inches(760 / dpi, 1024 / dpi)
         plt.savefig('export/current.png', dpi=dpi)
         # plt.show()
 
