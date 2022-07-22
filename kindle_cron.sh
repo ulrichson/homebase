@@ -2,6 +2,8 @@
 
 KINDLE_IP=192.168.15.244
 
+script_path=$(dirname "$(readlink -f "$0")")
+
 # Disable Kindle services
 ssh root@$KINDLE_IP /sbin/stop lab126_gui # Basic UI as it's not needed
 ssh root@$KINDLE_IP /sbin/stop powerd # Should prevent screensaver and background LEDs
