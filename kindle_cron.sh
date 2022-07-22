@@ -2,7 +2,7 @@
 
 KINDLE_IP=192.168.15.244
 
-ifconfig usb0 192.168.15.201
+sudo ifconfig usb0 192.168.15.201
 
 script_path=$(dirname "$(readlink -f "$0")")
 
