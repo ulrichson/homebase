@@ -1,6 +1,6 @@
-from cmath import nan
 import logging
 import os
+from cmath import nan
 from datetime import datetime, timedelta
 
 import matplotlib
@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytz
 from influxdb_client import InfluxDBClient, QueryApi
+from PIL import Image
 
 # Load environment variables
 meter_id = os.environ['METER_ID']
@@ -150,6 +151,10 @@ def main():
         fig.set_size_inches(768 / dpi, 1024 / dpi)
         plt.savefig('export/current.png', dpi=dpi)
         # plt.show()
+
+        # Convert to greyscale supported by Kindle
+        img = Image.open('export/current.png').convert('L')
+        img.save('export/current.png')
 
         logging.info('Rendering chart done')
 
