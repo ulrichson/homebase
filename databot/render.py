@@ -126,8 +126,8 @@ def add_values(idx, values, axs, ylabel):
                           bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
     # Add total to right (faking it as an 8th column outside the plot)
     if total > 0:
-        axs[idx].text(x=7, y=1, s='Σ = {:.2f}'.format(
-            total), fontsize=6, rotation=90, horizontalalignment='center', verticalalignment='center')
+        axs[idx].text(x=7, y=0, s='Σ = {:.2f} / Ø = {:.2f}'.format(total, total / len(
+            labels)), fontsize=6, rotation=90, horizontalalignment='center', verticalalignment='bottom')
 
     # Avoid that yaxix label sticks on the border
     # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
