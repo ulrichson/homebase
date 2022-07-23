@@ -148,6 +148,15 @@ The variables `INFLUX_BUCKET` and `DOCKER_INFLUXDB_INIT_BUCKET` must have the sa
 docker compose up --build
 ```
 
+## Develop
+
+Run scripts direclty:
+
+```bash
+cd ./databot
+INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
+```
+
 ## Manually migrate data
 
 Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
