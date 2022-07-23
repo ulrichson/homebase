@@ -34,7 +34,14 @@ def get_values(weeks_back):
     today = today.replace(hour=0, minute=0, second=0, microsecond=0)
     start = today - timedelta(days=today.weekday(), weeks=weeks_back)
     stop = start + timedelta(weeks=1)
-    start += timedelta(hours=6)
+
+    # Add 15 min to be coherent with NÖ Netz interval
+    start += timedelta(minutes=15)
+    stop += timedelta(minutes=15)
+
+    # UTC offset - 15min for correct interval
+    offset = '-{:.0f}m'.format(pytz.timezone(tz).localize(
+        today).utcoffset().total_seconds() / 60 - 15)
 
     # Convert to UTC as it's stored in DB
     start = pytz.timezone(tz).localize(start).astimezone(pytz.UTC)
@@ -45,7 +52,9 @@ def get_values(weeks_back):
     flux_query = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
-        f'|> aggregateWindow(every: 6h, createEmpty: false, fn: sum)'
+        f'|> aggregateWindow(every: 6h, createEmpty: false, offset: {offset}, fn: sum)'
+
+    # logging.info(f'Query:\n\t{flux_query}')
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
@@ -61,36 +70,36 @@ def get_values(weeks_back):
 
 
 def add_values(idx, values, axs, ylabel):
-    day_part_1_means = []
-    day_part_2_means = []
-    day_part_3_means = []
-    day_part_4_means = []
+    day_part_1_sums = []
+    day_part_2_sums = []
+    day_part_3_sums = []
+    day_part_4_sums = []
 
     for i in range(len(labels)):
         try:
-            day_part_1_means.append(values[i * 4 + 0])
+            day_part_1_sums.append(values[i * 4 + 0])
         except:
-            day_part_1_means.append(nan)
+            day_part_1_sums.append(nan)
         try:
-            day_part_2_means.append(values[i * 4 + 1])
+            day_part_2_sums.append(values[i * 4 + 1])
         except:
-            day_part_2_means.append(nan)
+            day_part_2_sums.append(nan)
         try:
-            day_part_3_means.append(values[i * 4 + 2])
+            day_part_3_sums.append(values[i * 4 + 2])
         except:
-            day_part_3_means.append(nan)
+            day_part_3_sums.append(nan)
         try:
-            day_part_4_means.append(values[i * 4 + 3])
+            day_part_4_sums.append(values[i * 4 + 3])
         except:
-            day_part_4_means.append(nan)
+            day_part_4_sums.append(nan)
 
-    rects1 = axs[idx].bar(x_label_locations - (width * 1.5), day_part_1_means, width,
+    rects1 = axs[idx].bar(x_label_locations - (width * 1.5), day_part_1_sums, width,
                           label='00:00-06:00', color='lightgray')
-    rects2 = axs[idx].bar(x_label_locations - (width * 0.5), day_part_2_means, width,
+    rects2 = axs[idx].bar(x_label_locations - (width * 0.5), day_part_2_sums, width,
                           label='06:00-12:00', color='gray')
-    rects3 = axs[idx].bar(x_label_locations + (width * 0.5), day_part_3_means, width,
+    rects3 = axs[idx].bar(x_label_locations + (width * 0.5), day_part_3_sums, width,
                           label='12:00-18:00', color='dimgray')
-    rects4 = axs[idx].bar(x_label_locations + (width * 1.5), day_part_4_means, width,
+    rects4 = axs[idx].bar(x_label_locations + (width * 1.5), day_part_4_sums, width,
                           label='18:00-24:00', color='darkgray')
     axs[idx].set_ylabel(ylabel)
     axs[idx].set_xticks(x_label_locations, labels)
@@ -105,6 +114,14 @@ def add_values(idx, values, axs, ylabel):
                        fmt=fmt, fontsize=4, fontweight='normal')
     axs[idx].bar_label(rects4, rotation='vertical',  padding=padding,  # label_type='center',
                        fmt=fmt, fontsize=4, fontweight='normal')
+
+    # Add daily sums to bottom of each group
+    for i in range(len(labels)):
+        sum = day_part_1_sums[i] + day_part_2_sums[i] + \
+            day_part_3_sums[i] + day_part_4_sums[i]
+        if sum > 0:
+            axs[idx].text(x=i, y=0.15, s=fmt % sum, fontsize=5, horizontalalignment='center',
+                          bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
 
     # Avoid that yaxix label sticks on the border
     # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
