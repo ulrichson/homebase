@@ -114,7 +114,7 @@ def add_values(idx, values, axs, ylabel):
 
 
 def main():
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(os.environ.get('LOGLEVEL', 'INFO').upper())
     logging.basicConfig(
         format='[ %(asctime)s %(levelname)s\t] %(message)s')
 

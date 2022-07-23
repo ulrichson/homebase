@@ -154,7 +154,7 @@ Run scripts direclty:
 
 ```bash
 cd ./databot
-INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
+LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
 ```
 
 ## Manually migrate data
