@@ -41,11 +41,11 @@ def get_values(weeks_back):
     stop = pytz.timezone(tz).localize(stop).astimezone(pytz.UTC)
 
     query_api = QueryApi(influxdb_client)
+    # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
-        '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' \
-        f'|> aggregateWindow(every: 6h, createEmpty: false, fn: mean)'
+        f'|> aggregateWindow(every: 6h, createEmpty: false, fn: sum)'
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
@@ -95,17 +95,22 @@ def add_values(idx, values, axs, ylabel):
     axs[idx].set_ylabel(ylabel)
     axs[idx].set_xticks(x_label_locations, labels)
 
-    axs[idx].bar_label(rects1, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=4, fontweight='normal')
-    axs[idx].bar_label(rects2, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=4, fontweight='normal')
-    axs[idx].bar_label(rects3, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=4, fontweight='normal')
-    axs[idx].bar_label(rects4, rotation='vertical', label_type='center',
-                       fmt='%.0f', fontsize=4, fontweight='normal')
+    fmt = '%.2f'
+    padding = 2
+    axs[idx].bar_label(rects1, rotation='vertical',  padding=padding,  # label_type='center',
+                       fmt=fmt, fontsize=4, fontweight='normal')
+    axs[idx].bar_label(rects2, rotation='vertical',  padding=padding,  # label_type='center',
+                       fmt=fmt, fontsize=4, fontweight='normal')
+    axs[idx].bar_label(rects3, rotation='vertical',  padding=padding,  # label_type='center',
+                       fmt=fmt, fontsize=4, fontweight='normal')
+    axs[idx].bar_label(rects4, rotation='vertical',  padding=padding,  # label_type='center',
+                       fmt=fmt, fontsize=4, fontweight='normal')
 
     # Avoid that yaxix label sticks on the border
     # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
+
+    # Leave some room above so that the labels above the bar won't overflow the chart
+    axs[idx].margins(y=0.15)
 
 
 def main():
@@ -142,7 +147,7 @@ def main():
 
         os.makedirs('export', exist_ok=True)
 
-        fig.suptitle('Stromverbrauch (Wh)')
+        fig.suptitle('Stromverbrauch (kWh)')
         # fig.tight_layout()
         fig.subplots_adjust(top=0.95)
 
