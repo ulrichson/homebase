@@ -117,17 +117,19 @@ def add_values(idx, values, axs, ylabel):
 
     # Add daily sums to bottom of each group
     total = 0
+    cnt = 0
     for i in range(len(labels)):
         sum = day_part_1_sums[i] + day_part_2_sums[i] + \
             day_part_3_sums[i] + day_part_4_sums[i]
         if sum > 0:
             total += sum
+            cnt += 1
             axs[idx].text(x=i, y=0.15, s=fmt % sum, fontsize=5, horizontalalignment='center',
                           bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
     # Add total to right (faking it as an 8th column outside the plot)
-    if total > 0:
-        axs[idx].text(x=7, y=0.2, s='Σ = {:.2f} / Ø = {:.2f}'.format(total, total / len(
-            labels)), fontsize=6, rotation=90, horizontalalignment='center', verticalalignment='bottom')
+    if total > 0 and cnt > 0:
+        axs[idx].text(x=7, y=0.2, s='Ø = {:.2f}   Σ = {:.2f}'.format(total / cnt, total),
+                      fontsize=6, rotation=90, horizontalalignment='center', verticalalignment='bottom')
 
     # Avoid that yaxix label sticks on the border
     # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
