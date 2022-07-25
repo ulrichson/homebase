@@ -47,10 +47,13 @@ def get_values(weeks_back):
     start = pytz.timezone(tz).localize(start).astimezone(pytz.UTC)
     stop = pytz.timezone(tz).localize(stop).astimezone(pytz.UTC)
 
+    start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    stop_str = stop.strftime("%Y-%m-%dT%H:%M:%SZ")
+
     query_api = QueryApi(influxdb_client)
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
-        f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
+        f'|> range(start: time(v: "{start_str}"), stop: time(v: "{stop_str}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
         f'|> aggregateWindow(every: 6h, createEmpty: false, offset: {offset}, fn: sum)'
 
@@ -58,7 +61,8 @@ def get_values(weeks_back):
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
-        raise Exception('Cannot render chart since no data is available')
+        logging.warn(f'No data between {start_str} and {stop_str}')
+        return []
 
     values = list(map(lambda r: r.get_value(), response[0].records))
 
