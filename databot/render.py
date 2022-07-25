@@ -52,12 +52,13 @@ def get_datetime_range(weeks_back):
 
 
 def get_line_chart_values(weeks_back):
-    start, stop, _ = get_datetime_range(weeks_back)
+    start, stop, offset = get_datetime_range(weeks_back)
 
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start}"), stop: time(v: "{stop}")) ' \
-        f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")'
+        f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")' \
+        f'|> aggregateWindow(every: 1h, createEmpty: false, offset: {offset}, fn: sum)'
 
     # logging.info(f'Query:\n\t{flux_query}')
 
@@ -147,8 +148,10 @@ def add_bars(idx, values, axs, ylabel):
         if sum > 0:
             total += sum
             cnt += 1
-            axs[idx].text(x=i, y=0.15, s=fmt % sum, fontsize=5, horizontalalignment='center',
-                          bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
+            axs[idx].text(x=i, y=0.15, s=fmt %
+                          sum, fontsize=5, horizontalalignment='center', color='white')
+            # bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
+
     # Add total to right (faking it as an 8th column outside the plot)
     if total > 0 and cnt > 0:
         axs[idx].text(x=7, y=0.2, s='Ø = {:.2f}   Σ = {:.2f}'.format(total / cnt, total),
@@ -158,20 +161,22 @@ def add_bars(idx, values, axs, ylabel):
     # axs[idx].yaxis.set_label_coords(-0.1, 0.5)
 
     # Leave some room above so that the labels above the bar won't overflow the chart
-    axs[idx].margins(y=0.15)
+    axs[idx].margins(x=0, y=0.15)
 
     # Add grid lines to distinguish day groupts
     axs[idx].set_xticks([0.5, 1.5, 2.5, 3.5, 4.5, 5.5], minor=True)
-    axs[idx].xaxis.grid(visible=True, linestyle='--', color='black',
-                        linewidth=0.3, which='minor')
+    axs[idx].xaxis.grid(visible=True, linestyle=':', color='black',
+                        linewidth=0.8, which='minor')
 
 
 def add_line(idx, values, axs):
-    axs[idx].plot(values, linewidth=0.2, color='black', alpha=0.5)
+    axs[idx].plot(values, linewidth=0.5, color='black', alpha=0.2)
 
     axs[idx].set_facecolor((0, 0, 0, 0))
     axs[idx].axes.xaxis.set_visible(False)
     axs[idx].axes.yaxis.set_visible(False)
+
+    axs[idx].margins(x=0, y=0)
 
 
 def main():
@@ -192,7 +197,6 @@ def main():
         # Plot bar data
         gs1 = fig.add_gridspec(3, hspace=0)
         axs1 = gs1.subplots(sharex=True, sharey=True)
-
         add_bars(idx=0, values=get_bar_chart_values(weeks_back=0),
                  axs=axs1, ylabel='Aktuelle Woche')
         add_bars(idx=1, values=get_bar_chart_values(weeks_back=1),
