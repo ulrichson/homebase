@@ -1,3 +1,4 @@
+from calendar import week
 import logging
 import os
 from cmath import nan
@@ -27,9 +28,10 @@ influxdb_client = InfluxDBClient(
     token=token,
     org=org
 )
+query_api = QueryApi(influxdb_client)
 
 
-def get_values(weeks_back):
+def get_datetime_range(weeks_back):
     today = datetime.now()
     today = today.replace(hour=0, minute=0, second=0, microsecond=0)
     start = today - timedelta(days=today.weekday(), weeks=weeks_back)
@@ -47,13 +49,15 @@ def get_values(weeks_back):
     start = pytz.timezone(tz).localize(start).astimezone(pytz.UTC)
     stop = pytz.timezone(tz).localize(stop).astimezone(pytz.UTC)
 
-    start_str = start.strftime("%Y-%m-%dT%H:%M:%SZ")
-    stop_str = stop.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return start.strftime("%Y-%m-%dT%H:%M:%SZ"), stop.strftime("%Y-%m-%dT%H:%M:%SZ"), offset
 
-    query_api = QueryApi(influxdb_client)
+
+def get_aggregated_values(weeks_back):
+    start, stop, offset = get_datetime_range(weeks_back)
+
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
-        f'|> range(start: time(v: "{start_str}"), stop: time(v: "{stop_str}")) ' \
+        f'|> range(start: time(v: "{start}"), stop: time(v: "{stop}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
         f'|> aggregateWindow(every: 6h, createEmpty: false, offset: {offset}, fn: sum)'
 
@@ -61,14 +65,10 @@ def get_values(weeks_back):
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
-        logging.warn(f'No data between {start_str} and {stop_str}')
+        logging.warning(f'No data between {start} and {stop}')
         return []
 
     values = list(map(lambda r: r.get_value(), response[0].records))
-
-    # print(list(map(lambda r: r.get_time().strftime(
-    #     "%Y-%m-%d, %H:%M"), response[0].records)))
-    # print('\n')
 
     return values
 
@@ -159,11 +159,11 @@ def main():
         fig = plt.figure()
         gs = fig.add_gridspec(3, hspace=0)
         axs = gs.subplots(sharex=True, sharey=True)
-        add_values(idx=0, values=get_values(weeks_back=0),
+        add_values(idx=0, values=get_aggregated_values(weeks_back=0),
                    axs=axs, ylabel='Aktuelle Woche')
-        add_values(idx=1, values=get_values(weeks_back=1),
+        add_values(idx=1, values=get_aggregated_values(weeks_back=1),
                    axs=axs, ylabel='Letzte Woche')
-        add_values(idx=2, values=get_values(weeks_back=2),
+        add_values(idx=2, values=get_aggregated_values(weeks_back=2),
                    axs=axs, ylabel='Vorletzte Woche')
 
         axs[2].legend(loc='upper center', bbox_to_anchor=(
