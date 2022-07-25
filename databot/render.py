@@ -1,4 +1,3 @@
-from calendar import week
 import logging
 import os
 from cmath import nan
@@ -21,7 +20,7 @@ url = os.environ['INFLUX_URL']
 
 labels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 x_label_locations = np.arange(len(labels))  # the label locations
-width = 0.2  # the width of the bars
+width = 0.25  # the width of the bars
 
 influxdb_client = InfluxDBClient(
     url=url,
@@ -52,7 +51,27 @@ def get_datetime_range(weeks_back):
     return start.strftime("%Y-%m-%dT%H:%M:%SZ"), stop.strftime("%Y-%m-%dT%H:%M:%SZ"), offset
 
 
-def get_aggregated_values(weeks_back):
+def get_line_chart_values(weeks_back):
+    start, stop, _ = get_datetime_range(weeks_back)
+
+    # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
+    flux_query = f'from(bucket: "{bucket}") ' \
+        f'|> range(start: time(v: "{start}"), stop: time(v: "{stop}")) ' \
+        f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")'
+
+    # logging.info(f'Query:\n\t{flux_query}')
+
+    response = query_api.query(flux_query)
+    if len(response) == 0 or len(response[0].records) == 0:
+        logging.warning(f'No line chart data between {start} and {stop}')
+        return []
+
+    values = list(map(lambda r: r.get_value(), response[0].records))
+
+    return values
+
+
+def get_bar_chart_values(weeks_back):
     start, stop, offset = get_datetime_range(weeks_back)
 
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
@@ -65,7 +84,7 @@ def get_aggregated_values(weeks_back):
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
-        logging.warning(f'No data between {start} and {stop}')
+        logging.warning(f'No bar chart data between {start} and {stop}')
         return []
 
     values = list(map(lambda r: r.get_value(), response[0].records))
@@ -73,7 +92,7 @@ def get_aggregated_values(weeks_back):
     return values
 
 
-def add_values(idx, values, axs, ylabel):
+def add_bars(idx, values, axs, ylabel):
     day_part_1_sums = []
     day_part_2_sums = []
     day_part_3_sums = []
@@ -141,6 +160,19 @@ def add_values(idx, values, axs, ylabel):
     # Leave some room above so that the labels above the bar won't overflow the chart
     axs[idx].margins(y=0.15)
 
+    # Add grid lines to distinguish day groupts
+    axs[idx].set_xticks([0.5, 1.5, 2.5, 3.5, 4.5, 5.5], minor=True)
+    axs[idx].xaxis.grid(visible=True, linestyle='--', color='black',
+                        linewidth=0.3, which='minor')
+
+
+def add_line(idx, values, axs):
+    axs[idx].plot(values, linewidth=0.2, color='black', alpha=0.5)
+
+    axs[idx].set_facecolor((0, 0, 0, 0))
+    axs[idx].axes.xaxis.set_visible(False)
+    axs[idx].axes.yaxis.set_visible(False)
+
 
 def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', 'INFO').upper())
@@ -155,24 +187,39 @@ def main():
         matplotlib.rcParams['font.size'] = 6
         matplotlib.rcParams['font.weight'] = 'bold'
 
-        # Plot data
         fig = plt.figure()
-        gs = fig.add_gridspec(3, hspace=0)
-        axs = gs.subplots(sharex=True, sharey=True)
-        add_values(idx=0, values=get_aggregated_values(weeks_back=0),
-                   axs=axs, ylabel='Aktuelle Woche')
-        add_values(idx=1, values=get_aggregated_values(weeks_back=1),
-                   axs=axs, ylabel='Letzte Woche')
-        add_values(idx=2, values=get_aggregated_values(weeks_back=2),
-                   axs=axs, ylabel='Vorletzte Woche')
 
-        axs[2].legend(loc='upper center', bbox_to_anchor=(
+        # Plot bar data
+        gs1 = fig.add_gridspec(3, hspace=0)
+        axs1 = gs1.subplots(sharex=True, sharey=True)
+
+        add_bars(idx=0, values=get_bar_chart_values(weeks_back=0),
+                 axs=axs1, ylabel='Aktuelle Woche')
+        add_bars(idx=1, values=get_bar_chart_values(weeks_back=1),
+                 axs=axs1, ylabel='Letzte Woche')
+        add_bars(idx=2, values=get_bar_chart_values(weeks_back=2),
+                 axs=axs1, ylabel='Vorletzte Woche')
+
+        axs1[2].legend(loc='upper center', bbox_to_anchor=(
             0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
 
+        # Plot line data
+        gs2 = fig.add_gridspec(3, hspace=0)
+        axs2 = gs2.subplots(sharex=True, sharey=True)
+        add_line(idx=0, values=get_line_chart_values(weeks_back=0), axs=axs2)
+        add_line(idx=1, values=get_line_chart_values(weeks_back=1), axs=axs2)
+        add_line(idx=2, values=get_line_chart_values(weeks_back=2), axs=axs2)
+
         # Remove `0` tick to avoid layout collisions with neighbor charts
-        for ax in axs:
+        for ax in axs1:
             ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
             ax.yaxis.get_major_ticks()[0].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[0].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[1].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[2].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[3].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[4].tick1line.set_visible(False)
+            ax.xaxis.get_minor_ticks()[5].tick1line.set_visible(False)
 
         os.makedirs('export', exist_ok=True)
 
