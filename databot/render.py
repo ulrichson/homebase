@@ -148,9 +148,8 @@ def add_bars(idx, values, axs, ylabel):
         if sum > 0:
             total += sum
             cnt += 1
-            axs[idx].text(x=i, y=0.15, s=fmt %
-                          sum, fontsize=5, horizontalalignment='center', color='white')
-            # bbox=dict(facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
+            axs[idx].text(x=i, y=0.15, s=fmt % sum, fontsize=5, horizontalalignment='center', bbox=dict(
+                facecolor='white', alpha=0.3, boxstyle='round', edgecolor='none', pad=0.2))
 
     # Add total to right (faking it as an 8th column outside the plot)
     if total > 0 and cnt > 0:
@@ -170,7 +169,7 @@ def add_bars(idx, values, axs, ylabel):
 
 
 def add_line(idx, values, axs):
-    axs[idx].plot(values, linewidth=0.5, color='black', alpha=0.2)
+    axs[idx].plot(values, linewidth=0.5, color='black', alpha=0.3)
 
     axs[idx].set_facecolor((0, 0, 0, 0))
     axs[idx].axes.xaxis.set_visible(False)
