@@ -145,7 +145,7 @@ def add_values(idx, values, axs, ylabel):
 def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', 'INFO').upper())
     logging.basicConfig(
-        format='[ %(asctime)s %(levelname)s\t] %(message)s')
+        format='[ %(asctime)s %(levelname)s ] %(message)s')
 
     try:
         logging.info('Rendering chart started')

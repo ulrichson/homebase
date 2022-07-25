@@ -143,7 +143,7 @@ def update():
 def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', 'INFO').upper())
     logging.basicConfig(
-        format='[ %(asctime)s %(levelname)s\t] %(message)s')
+        format='[ %(asctime)s %(levelname)s ] %(message)s')
     parser = ArgumentParser()
     parser.add_argument('-m', '--migrate', default=False,
                         action='store_true', help='Migrate old measurement data into DB')
