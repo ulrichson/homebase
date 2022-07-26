@@ -207,11 +207,11 @@ def main():
             0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
 
         # Plot line data
-        gs2 = fig.add_gridspec(3, hspace=0)
-        axs2 = gs2.subplots(sharex=True, sharey=True)
-        add_line(idx=0, values=get_line_chart_values(weeks_back=0), axs=axs2)
-        add_line(idx=1, values=get_line_chart_values(weeks_back=1), axs=axs2)
-        add_line(idx=2, values=get_line_chart_values(weeks_back=2), axs=axs2)
+        # gs2 = fig.add_gridspec(3, hspace=0)
+        # axs2 = gs2.subplots(sharex=True, sharey=True)
+        # add_line(idx=0, values=get_line_chart_values(weeks_back=0), axs=axs2)
+        # add_line(idx=1, values=get_line_chart_values(weeks_back=1), axs=axs2)
+        # add_line(idx=2, values=get_line_chart_values(weeks_back=2), axs=axs2)
 
         # Remove `0` tick to avoid layout collisions with neighbor charts
         for ax in axs1:
