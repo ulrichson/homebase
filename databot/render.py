@@ -1,5 +1,6 @@
 import logging
 import os
+from argparse import ArgumentParser
 from cmath import nan
 from datetime import datetime, timedelta
 
@@ -30,10 +31,9 @@ influxdb_client = InfluxDBClient(
 query_api = QueryApi(influxdb_client)
 
 
-def get_datetime_range(weeks_back):
-    today = datetime.now()
-    today = today.replace(hour=0, minute=0, second=0, microsecond=0)
-    start = today - timedelta(days=today.weekday(), weeks=weeks_back)
+def get_datetime_range(weeks_back, date):
+    date = date.replace(hour=0, minute=0, second=0, microsecond=0)
+    start = date - timedelta(days=date.weekday(), weeks=weeks_back)
     stop = start + timedelta(weeks=1)
 
     # Add 15 min to be coherent with NÖ Netz interval
@@ -42,7 +42,7 @@ def get_datetime_range(weeks_back):
 
     # UTC offset - 15min for correct interval
     offset = '-{:.0f}m'.format(pytz.timezone(tz).localize(
-        today).utcoffset().total_seconds() / 60 - 15)
+        date).utcoffset().total_seconds() / 60 - 15)
 
     # Convert to UTC as it's stored in DB
     start = pytz.timezone(tz).localize(start).astimezone(pytz.UTC)
@@ -51,8 +51,8 @@ def get_datetime_range(weeks_back):
     return start.strftime("%Y-%m-%dT%H:%M:%SZ"), stop.strftime("%Y-%m-%dT%H:%M:%SZ"), offset
 
 
-def get_line_chart_values(weeks_back):
-    start, stop, offset = get_datetime_range(weeks_back)
+def get_line_chart_values(weeks_back, date):
+    start, stop, offset = get_datetime_range(weeks_back, date)
 
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
@@ -72,8 +72,8 @@ def get_line_chart_values(weeks_back):
     return values
 
 
-def get_bar_chart_values(weeks_back):
-    start, stop, offset = get_datetime_range(weeks_back)
+def get_bar_chart_values(weeks_back, date):
+    start, stop, offset = get_datetime_range(weeks_back, date)
 
     # '|> map(fn: (r) => ({r with _value: r._value * 1000.0 })) ' -> add if you want Wh instead of kWh
     flux_query = f'from(bucket: "{bucket}") ' \
@@ -179,70 +179,110 @@ def add_line(idx, values, axs):
     axs[idx].margins(x=0, y=0)
 
 
+def render(date=datetime.now(), filename='current.png', title_suffix=''):
+    date_str = date.strftime('%Y-%m-%d')
+    logging.info(f'Rendering chart {date_str} started')
+
+    # Make it appear a little differen
+    matplotlib.rcParams['font.family'] = ['monospace']
+    matplotlib.rcParams['font.size'] = 6
+    matplotlib.rcParams['font.weight'] = 'bold'
+
+    fig = plt.figure()
+
+    # Plot bar data
+    gs1 = fig.add_gridspec(3, hspace=0)
+    axs1 = gs1.subplots(sharex=True, sharey=True)
+    add_bars(idx=0, values=get_bar_chart_values(weeks_back=0, date=date),
+             axs=axs1, ylabel='Aktuelle Woche')
+    add_bars(idx=1, values=get_bar_chart_values(weeks_back=1, date=date),
+             axs=axs1, ylabel='Letzte Woche')
+    add_bars(idx=2, values=get_bar_chart_values(weeks_back=2, date=date),
+             axs=axs1, ylabel='Vorletzte Woche')
+
+    axs1[2].legend(loc='upper center', bbox_to_anchor=(
+        0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
+
+    # Plot line data
+    # gs2 = fig.add_gridspec(3, hspace=0)
+    # axs2 = gs2.subplots(sharex=True, sharey=True)
+    # add_line(idx=0, values=get_line_chart_values(weeks_back=0), axs=axs2)
+    # add_line(idx=1, values=get_line_chart_values(weeks_back=1), axs=axs2)
+    # add_line(idx=2, values=get_line_chart_values(weeks_back=2), axs=axs2)
+
+    # Remove `0` tick to avoid layout collisions with neighbor charts
+    for ax in axs1:
+        ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
+        ax.yaxis.get_major_ticks()[0].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[0].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[1].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[2].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[3].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[4].tick1line.set_visible(False)
+        ax.xaxis.get_minor_ticks()[5].tick1line.set_visible(False)
+
+    os.makedirs('export', exist_ok=True)
+
+    fig.suptitle('Stromverbrauch (kWh)' + title_suffix)
+    # fig.tight_layout()
+    fig.subplots_adjust(top=0.95)
+
+    # Kindle Paperwhite has native resolution of 1024 x 758 px @ 212 dpi
+    dpi = 212
+    # Some buffer needed to actually get 758w ...
+    fig.set_size_inches(760 / dpi, 1024 / dpi)
+    plt.savefig('export/' + filename, dpi=dpi)
+    # plt.show()
+
+    # Convert to greyscale supported by Kindle
+    img = Image.open('export/' + filename).convert('L')
+    img.save('export/' + filename)
+
+    logging.info(f'Rendering chart {date_str} done')
+
+
+def archive():
+    logging.info('Archiving chart started')
+
+    date_format = '%Y-%m-%d'
+    delta_week = 1
+    has_next = True
+    max_failed_attempts = 3
+    failed_attempts = 0
+    allowed_empty_days = 7
+    while has_next:
+        date = datetime.now() - timedelta(weeks=delta_week)
+        try:
+            if not render(date=date, filename=f'{meter_id}_{date.strftime(date_format)}.png', title_suffix=f' [ {date.strftime(date_format)} ]'):
+                allowed_empty_days -= 1
+            delta_week += 1
+        except Exception as err:
+            failed_attempts += 1
+            logging.error(err)
+
+        if failed_attempts >= max_failed_attempts or allowed_empty_days < 0:
+            logging.info(
+                'Stopping archiving since no more data is present')
+            has_next = False
+
+    logging.info('Archiving charts done')
+
+
 def main():
     logging.getLogger().setLevel(os.environ.get('LOGLEVEL', 'INFO').upper())
     logging.basicConfig(
         format='[ %(asctime)s %(levelname)s ] %(message)s')
 
+    parser = ArgumentParser()
+    parser.add_argument('-a', '--archive', default=False,
+                        action='store_true', help='Archive previous charts')
+    args = parser.parse_args()
+
     try:
-        logging.info('Rendering chart started')
-
-        # Make it appear a little differen
-        matplotlib.rcParams['font.family'] = ['monospace']
-        matplotlib.rcParams['font.size'] = 6
-        matplotlib.rcParams['font.weight'] = 'bold'
-
-        fig = plt.figure()
-
-        # Plot bar data
-        gs1 = fig.add_gridspec(3, hspace=0)
-        axs1 = gs1.subplots(sharex=True, sharey=True)
-        add_bars(idx=0, values=get_bar_chart_values(weeks_back=0),
-                 axs=axs1, ylabel='Aktuelle Woche')
-        add_bars(idx=1, values=get_bar_chart_values(weeks_back=1),
-                 axs=axs1, ylabel='Letzte Woche')
-        add_bars(idx=2, values=get_bar_chart_values(weeks_back=2),
-                 axs=axs1, ylabel='Vorletzte Woche')
-
-        axs1[2].legend(loc='upper center', bbox_to_anchor=(
-            0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
-
-        # Plot line data
-        # gs2 = fig.add_gridspec(3, hspace=0)
-        # axs2 = gs2.subplots(sharex=True, sharey=True)
-        # add_line(idx=0, values=get_line_chart_values(weeks_back=0), axs=axs2)
-        # add_line(idx=1, values=get_line_chart_values(weeks_back=1), axs=axs2)
-        # add_line(idx=2, values=get_line_chart_values(weeks_back=2), axs=axs2)
-
-        # Remove `0` tick to avoid layout collisions with neighbor charts
-        for ax in axs1:
-            ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
-            ax.yaxis.get_major_ticks()[0].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[0].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[1].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[2].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[3].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[4].tick1line.set_visible(False)
-            ax.xaxis.get_minor_ticks()[5].tick1line.set_visible(False)
-
-        os.makedirs('export', exist_ok=True)
-
-        fig.suptitle('Stromverbrauch (kWh)')
-        # fig.tight_layout()
-        fig.subplots_adjust(top=0.95)
-
-        # Kindle Paperwhite has native resolution of 1024 x 758 px @ 212 dpi
-        dpi = 212
-        # Some buffer needed to actually get 758w ...
-        fig.set_size_inches(760 / dpi, 1024 / dpi)
-        plt.savefig('export/current.png', dpi=dpi)
-        # plt.show()
-
-        # Convert to greyscale supported by Kindle
-        img = Image.open('export/current.png').convert('L')
-        img.save('export/current.png')
-
-        logging.info('Rendering chart done')
+        if args.archive:
+            archive()
+        else:
+            render()
 
     except Exception as err:
         logging.error(err)
