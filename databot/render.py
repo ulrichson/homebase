@@ -117,13 +117,14 @@ def add_bars(idx, values, axs, ylabel):
         except:
             day_part_4_sums.append(nan)
 
-    rects1 = axs[idx].bar(x_label_locations - (width * 1.5), day_part_1_sums, width,
+    epsilon = 0.01  # Add a small epsilon to prevent small gaps
+    rects1 = axs[idx].bar(x_label_locations - (width * 1.5), day_part_1_sums, width + epsilon,
                           label='00:00-06:00', color='lightgray')
-    rects2 = axs[idx].bar(x_label_locations - (width * 0.5), day_part_2_sums, width,
+    rects2 = axs[idx].bar(x_label_locations - (width * 0.5), day_part_2_sums, width + epsilon,
                           label='06:00-12:00', color='gray')
-    rects3 = axs[idx].bar(x_label_locations + (width * 0.5), day_part_3_sums, width,
+    rects3 = axs[idx].bar(x_label_locations + (width * 0.5), day_part_3_sums, width + epsilon,
                           label='12:00-18:00', color='dimgray')
-    rects4 = axs[idx].bar(x_label_locations + (width * 1.5), day_part_4_sums, width,
+    rects4 = axs[idx].bar(x_label_locations + (width * 1.5), day_part_4_sums, width + epsilon,
                           label='18:00-24:00', color='darkgray')
     axs[idx].set_ylabel(ylabel)
     axs[idx].set_xticks(x_label_locations, labels)
