@@ -242,7 +242,7 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
 
 
 def archive():
-    logging.info('Archiving chart started')
+    logging.info('Archiving charts started')
 
     date_format = '%Y-%m-%d'
     delta_week = 1
