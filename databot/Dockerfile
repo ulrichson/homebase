@@ -6,12 +6,13 @@ RUN apt-get update && apt-get install -y \
     gcc \
     cron
 
-COPY Pipfile Pipfile.lock /app/
+COPY requirements.txt /app/
 COPY *.py /app/
 COPY *.sh /app
 WORKDIR /app
 RUN python -m pip install --upgrade pip
-RUN pip install pipenv && pipenv install
+RUN pip install -r requirements.txt
+# Permissions for cron job
 RUN chmod 0644 /app/*.sh
 RUN chmod +x /app/start.sh
 

@@ -154,8 +154,10 @@ Run scripts direclty:
 
 ```bash
 cd ./databot
-LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
+LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env python3 render.py
 ```
+
+For some reason the `pipenv` in the Docker environment won't work. Thus a `requirements.txt` file is used. To update it run `pip freeze > requirements.txt`.
 
 ## Commands
 
@@ -164,13 +166,13 @@ LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env p
 Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
 
 ```bash
-docker compose run --rm databot pipenv run python3 load.py --migrate
+docker compose run --rm databot python3 load.py --migrate
 ```
 
 ### Archive previous week charts
 
 ```bash
-docker compose run --rm databot pipenv run python3 render.py --archive
+docker compose run --rm databot python3 render.py --archive
 ```
 
 ## Flux queries
