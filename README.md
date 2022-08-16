@@ -154,7 +154,7 @@ Run scripts direclty:
 
 ```bash
 cd ./databot
-LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env python3 render.py
+LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
 ```
 
 For some reason the `pipenv` in the Docker environment won't work. Thus a `requirements.txt` file is used. To update it run `pip freeze > requirements.txt`.
@@ -170,6 +170,8 @@ docker compose run --rm databot python3 load.py --migrate
 ```
 
 ### Archive previous week charts
+
+This task is performed automatically via a cron job
 
 ```bash
 docker compose run --rm databot python3 render.py --archive

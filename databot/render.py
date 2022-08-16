@@ -3,6 +3,7 @@ import os
 from argparse import ArgumentParser
 from cmath import nan
 from datetime import datetime, timedelta
+from os.path import exists
 
 import matplotlib
 import matplotlib.pyplot as plt
@@ -10,6 +11,8 @@ import numpy as np
 import pytz
 from influxdb_client import InfluxDBClient, QueryApi
 from PIL import Image
+
+base_path = 'export/'
 
 # Load environment variables
 meter_id = os.environ['METER_ID']
@@ -181,6 +184,14 @@ def add_line(idx, values, axs):
 
 def render(date=datetime.now(), filename='current.png', title_suffix=''):
     date_str = date.strftime('%Y-%m-%d')
+    values_w0 = get_bar_chart_values(weeks_back=0, date=date)
+    values_w1 = get_bar_chart_values(weeks_back=1, date=date)
+    values_w2 = get_bar_chart_values(weeks_back=2, date=date)
+    has_data = len(values_w0) > 0 or len(values_w1) > 0 or len(values_w2) > 0
+
+    if not has_data:
+        return False
+
     logging.info(f'Rendering chart {date_str} started')
 
     # Make it appear a little differen
@@ -193,12 +204,10 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     # Plot bar data
     gs1 = fig.add_gridspec(3, hspace=0)
     axs1 = gs1.subplots(sharex=True, sharey=True)
-    add_bars(idx=0, values=get_bar_chart_values(weeks_back=0, date=date),
-             axs=axs1, ylabel='Aktuelle Woche')
-    add_bars(idx=1, values=get_bar_chart_values(weeks_back=1, date=date),
-             axs=axs1, ylabel='Letzte Woche')
-    add_bars(idx=2, values=get_bar_chart_values(weeks_back=2, date=date),
-             axs=axs1, ylabel='Vorletzte Woche')
+
+    add_bars(idx=0, values=values_w0, axs=axs1, ylabel='Aktuelle Woche')
+    add_bars(idx=1, values=values_w1, axs=axs1, ylabel='Letzte Woche')
+    add_bars(idx=2, values=values_w2, axs=axs1, ylabel='Vorletzte Woche')
 
     axs1[2].legend(loc='upper center', bbox_to_anchor=(
         0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
@@ -231,14 +240,16 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     dpi = 212
     # Some buffer needed to actually get 758w ...
     fig.set_size_inches(760 / dpi, 1024 / dpi)
-    plt.savefig('export/' + filename, dpi=dpi)
+    plt.savefig(base_path + filename, dpi=dpi)
     # plt.show()
 
     # Convert to greyscale supported by Kindle
-    img = Image.open('export/' + filename).convert('L')
-    img.save('export/' + filename)
+    img = Image.open(base_path + filename).convert('L')
+    img.save(base_path + filename)
 
     logging.info(f'Rendering chart {date_str} done')
+
+    return True
 
 
 def archive():
@@ -247,20 +258,23 @@ def archive():
     date_format = '%Y-%m-%d'
     delta_week = 1
     has_next = True
-    max_failed_attempts = 3
+    max_failed_attempts = 1
     failed_attempts = 0
-    allowed_empty_days = 7
+    allowed_skip_weeks = 3
     while has_next:
         date = datetime.now() - timedelta(weeks=delta_week)
+        start = date - timedelta(days=date.weekday())
+        stop = start + timedelta(days=6)
         try:
-            if not render(date=date, filename=f'{meter_id}_{date.strftime(date_format)}.png', title_suffix=f' [ {date.strftime(date_format)} ]'):
-                allowed_empty_days -= 1
+            filename = f'{meter_id}_{start.strftime(date_format)}-{stop.strftime(date_format)}.png'
+            if exists(base_path + filename) or not render(date=stop, filename=filename, title_suffix=f' [ {start.strftime(date_format)} - {stop.strftime(date_format)} ]'):
+                allowed_skip_weeks -= 1
             delta_week += 1
         except Exception as err:
             failed_attempts += 1
             logging.error(err)
 
-        if failed_attempts >= max_failed_attempts or allowed_empty_days < 0:
+        if failed_attempts >= max_failed_attempts or allowed_skip_weeks <= 0:
             logging.info(
                 'Stopping archiving since no more data is present')
             has_next = False
