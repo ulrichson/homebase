@@ -3,6 +3,7 @@ import os
 from argparse import ArgumentParser
 from cmath import nan
 from datetime import datetime, timedelta
+from glob import glob
 from os.path import exists
 
 import matplotlib
@@ -255,6 +256,15 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     return True
 
 
+def clean():
+    for file in glob(base_path + f'{meter_id}_*-*.png'):
+        try:
+            os.remove(file)
+            logging.info(f'Deleted {file}')
+        except:
+            logging.error(f'Deleting {file} failed')
+
+
 def archive():
     logging.info('Archiving charts started')
 
@@ -293,9 +303,14 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('-a', '--archive', default=False,
                         action='store_true', help='Archive previous charts')
+    parser.add_argument('-c', '--clean', default=False,
+                        action='store_true', help='Clean previous charts')
     args = parser.parse_args()
 
     try:
+        if args.clean:
+            clean()
+
         if args.archive:
             archive()
         else:
