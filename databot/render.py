@@ -96,6 +96,24 @@ def get_bar_chart_values(weeks_back, date):
     return values
 
 
+def get_ytd_statistics(date):
+    # Convert to UTC as it's stored in DB
+    start = pytz.timezone(tz).localize(
+        datetime(date.year, 1, 1)).astimezone(pytz.UTC)
+    stop = pytz.timezone(tz).localize(date).astimezone(pytz.UTC)
+    response_mean = query_api.query(f'from(bucket: "{bucket}") '
+                                    f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) '
+                                    f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") '
+                                    f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)'
+                                    f'|> mean()')
+    response_sum = query_api.query(f'from(bucket: "{bucket}") '
+                                   f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) '
+                                   f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") '
+                                   f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)'
+                                   f'|> sum()')
+    return response_mean[0].records[0].get_value(), response_sum[0].records[0].get_value()
+
+
 def add_bars(values, axs, ylabel):
     day_part_1_sums = []
     day_part_2_sums = []
@@ -192,11 +210,15 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     # Plot bar data
     fig, (axs1, axs2, axs3) = plt.subplots(
         3, 1, sharex=True, sharey=True)
-    plt.subplots_adjust(hspace=0)
+    plt.subplots_adjust(hspace=0, top=0.91)
 
     add_bars(values=values_w0, axs=axs1, ylabel='Aktuelle Woche')
     add_bars(values=values_w1, axs=axs2, ylabel='Letzte Woche')
     add_bars(values=values_w2, axs=axs3, ylabel='Vorletzte Woche')
+
+    ytd_mean, ytd_sum = get_ytd_statistics(date)
+    axs1.set_title('YTD   Ø = {:.2f}   Σ = {:.2f}'.format(
+        ytd_mean, ytd_sum), fontsize=6, loc='left')
 
     axs3.legend(loc='upper center', bbox_to_anchor=(
         0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
@@ -216,7 +238,6 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
 
     fig.suptitle('Stromverbrauch (kWh)' + title_suffix)
     # fig.tight_layout()
-    fig.subplots_adjust(top=0.95)
 
     # Kindle Paperwhite has native resolution of 1024 x 758 px @ 212 dpi
     dpi = 212
@@ -249,7 +270,7 @@ def archive():
         stop = start + timedelta(days=6)
         try:
             filename = f'{meter_id}_{start.strftime(date_format)}-{stop.strftime(date_format)}.png'
-            if exists(base_path + filename) or not render(date=stop, filename=filename, title_suffix=f' [ {start.strftime(date_format)} - {stop.strftime(date_format)} ]'):
+            if exists(base_path + filename) or not render(date=stop, filename=filename, title_suffix=f' {start.strftime(date_format)} - {stop.strftime(date_format)}'):
                 allowed_skip_weeks -= 1
             delta_week += 1
         except Exception as err:
