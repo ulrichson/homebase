@@ -128,13 +128,11 @@ async function run() {
   });
   await downloadResult(page);
 
-  // Logout
   console.log('Logout');
   await page.goto(
     'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
   );
 
-  // Close the browser
   await browser.close();
 }
 
