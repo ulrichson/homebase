@@ -18,7 +18,7 @@ program
   .option('-u, --username <username>', 'The username')
   .option('-p, --password <password>', 'The password')
   .option(
-    '-s, --date <date>',
+    '-d, --date <date>',
     'The date to fetch',
     moment().subtract(1, 'days').format('DD.MM.YYYY')
   )
@@ -116,6 +116,29 @@ async function run() {
       (await page.$eval('#myForm1\\:calendarToRegion', (el) => (<any>el).value))
   );
 
+  console.log('Select "Energiemenge in kWh"');
+  // No need to click, it's pre-selected
+  // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
+  await downloadResult(page);
+
+  console.log('Select "Leistung in kW"');
+  page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
+  await page.waitForResponse((response) => {
+    return response.request().url().includes('/consumption.jsf');
+  });
+  await downloadResult(page);
+
+  // Logout
+  console.log('Logout');
+  await page.goto(
+    'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
+  );
+
+  // Close the browser
+  await browser.close();
+}
+
+async function downloadResult(page: Page) {
   console.log('Click "Anzeigen"');
   await page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
   await page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
@@ -152,15 +175,6 @@ async function run() {
   }
 
   console.log(`Received ${tableData.rows.length} data rows`);
-
-  // Logout
-  console.log('Logout');
-  await page.goto(
-    'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
-  );
-
-  // Close the browser
-  await browser.close();
 }
 
 run();
