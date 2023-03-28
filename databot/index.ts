@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env node
 
 import { Command } from 'commander';
 import moment from 'moment';
@@ -12,23 +12,6 @@ interface TableData {
   headers: string[];
   rows: TableRow[];
 }
-
-const program = new Command();
-program
-  .option('-u, --username <username>', 'The username')
-  .option('-p, --password <password>', 'The password')
-  .option(
-    '-d, --date <date>',
-    'The date to fetch',
-    moment().subtract(1, 'days').format('DD.MM.YYYY')
-  )
-  .parse();
-
-const options = program.opts();
-
-const username = options.username;
-const password = options.password;
-const date = options.date;
 
 const tableToJson = async (
   page: Page,
@@ -67,7 +50,7 @@ const tableToJson = async (
   return { headers, rows };
 };
 
-async function run() {
+async function load() {
   const browser = await puppeteer.launch();
   const page = await browser.newPage();
 
@@ -175,4 +158,21 @@ async function downloadResult(page: Page) {
   console.log(`Received ${tableData.rows.length} data rows`);
 }
 
-run();
+const program = new Command();
+program
+  .option('-u, --username <username>', 'The username')
+  .option('-p, --password <password>', 'The password')
+  .option(
+    '-d, --date <date>',
+    'The date to fetch',
+    moment().subtract(1, 'days').format('DD.MM.YYYY')
+  )
+  .parse();
+
+const options = program.opts();
+
+const username = options.username;
+const password = options.password;
+const date = options.date;
+
+load();
