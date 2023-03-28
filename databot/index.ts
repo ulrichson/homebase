@@ -45,7 +45,9 @@ class Bot {
   }
 
   private async init() {
-    this.browser = await puppeteer.launch();
+    this.browser = await puppeteer.launch({
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     this.page = await this.browser.newPage();
   }
 

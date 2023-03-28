@@ -3,16 +3,17 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "private": true,
   "scripts": {
     "start": "nodemon --exec ts-node index.ts",
     "build": "tsc",
     "watch": "tsc --watch"
   },
   "bin": {
-    "load": "./index.ts"
+    "databot": "./index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Ulrich Lehner",
   "license": "ISC",
   "dependencies": {
     "@influxdata/influxdb-client": "^1.33.2",
@@ -23,7 +24,6 @@
     "puppeteer": "^19.8.0"
   },
   "devDependencies": {
-    "@types/puppeteer": "^7.0.4",
     "nodemon": "^2.0.22",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.2"
