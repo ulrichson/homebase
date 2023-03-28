@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { InfluxDB, Point } from '@influxdata/influxdb-client';
 import { Command } from 'commander';
 import * as dotenv from 'dotenv';
 import moment from 'moment-timezone';
@@ -10,10 +11,10 @@ const dateFormat = 'DD.MM.YYYY';
 interface Config {
   meterId: string;
   tz: string;
-  bucket: string;
-  org: string;
-  token: string;
-  url: string;
+  influxBucket: string;
+  influxOrg: string;
+  influxToken: string;
+  influxUrl: string;
   username: string;
   password: string;
 }
@@ -32,7 +33,7 @@ class Bot {
   private browser?: Browser;
   private page?: Page;
 
-  constructor(private config: Config) {
+  constructor(private config: Config, private influxDb: InfluxDB) {
     this.ready = new Promise(async (resolve, reject) => {
       try {
         await this.init();
@@ -97,14 +98,49 @@ class Bot {
       console.debug('Select "Energiemenge in kWh"');
       // No need to click, it's pre-selected
       // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
-      await this.downloadResult();
+      const meteredValuesDataTable = await this.downloadResult();
 
       console.debug('Select "Leistung in kW"');
       this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
-      await this.downloadResult();
+      console.debug('Reset pagination');
+      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
+      await this.page.waitForResponse((response) => {
+        return response.request().url().includes('/consumption.jsf');
+      });
+
+      const meteredPeakDemandsDataTable = await this.downloadResult();
+
+      const data = [
+        ...meteredPeakDemandsDataTable.rows.map((row) => {
+          const dateKey = meteredPeakDemandsDataTable.headers[0];
+          const valueKey = meteredPeakDemandsDataTable.headers[1];
+          const substituteValueKey = meteredPeakDemandsDataTable.headers[2];
+          return new Point('meteredPeakDemands')
+            .tag('meterId', this.config.meterId)
+            .timestamp(row[dateKey] as Date)
+            .floatField('value', row[valueKey] ?? row[substituteValueKey]);
+        }),
+        ...meteredValuesDataTable.rows.map((row) => {
+          const dateKey = meteredValuesDataTable.headers[0];
+          const valueKey = meteredValuesDataTable.headers[1];
+          const substituteValueKey = meteredValuesDataTable.headers[2];
+          return new Point('meteredValues')
+            .tag('meterId', this.config.meterId)
+            .timestamp(row[dateKey] as Date)
+            .floatField('value', row[valueKey] ?? row[substituteValueKey]);
+        }),
+      ];
+      const writeApi = this.influxDb.getWriteApi(
+        this.config.influxOrg,
+        this.config.influxBucket,
+        's'
+      );
+      writeApi.writePoints(data);
+      writeApi.close();
+      console.info(`Stored measurements in DB for ${day}`);
     } catch {
       console.warn(`No measurement data for ${day}`);
       return false;
@@ -147,7 +183,7 @@ class Bot {
       throw new Error('Not initialized');
     }
 
-    console.debug('Logout');
+    console.debug('Navigate to logout');
     await this.page.goto(
       'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
     );
@@ -198,6 +234,8 @@ class Bot {
     }
 
     console.debug(`Received ${tableData.rows.length} data rows`);
+
+    return tableData;
   }
 
   private async tableToJson(tableSelector: string): Promise<TableData> {
@@ -223,7 +261,9 @@ class Bot {
       rows.push(
         headers.reduce((acc, th, index) => {
           const number = Number(tds[index].replace(',', '.'));
-          const date = moment(tds[index], 'DD.MM.YYYY hh:mm').toDate();
+          const date = moment
+            .tz(tds[index], 'DD.MM.YYYY hh:mm', this.config.tz)
+            .toDate();
           acc[th] = !tds[index]
             ? null
             : !Number.isNaN(number)
@@ -269,56 +309,92 @@ async function main() {
     }
   }
 
+  async function update({
+    bot,
+    config,
+    influxDb,
+  }: {
+    bot: Bot;
+    config: Config;
+    influxDb: InfluxDB;
+  }) {
+    try {
+      const queryApi = influxDb.getQueryApi(config.influxOrg);
+      const fluxQuery = `
+        from(bucket: "${config.influxBucket}")
+        |> range(start: 0)
+        |> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")
+        |> last()
+      `;
+      const response = await queryApi.collectRows(fluxQuery);
+      if (response.length === 0) {
+        await migrate({ bot, config });
+      } else {
+        let dt = moment((<any>response[0])['_time']).tz(config.tz);
+        while (dt <= moment().tz(config.tz)) {
+          await bot.load(dt.format(dateFormat));
+          dt.add(1, 'days');
+        }
+      }
+    } catch (err) {
+      console.error((<Error>err).message);
+    }
+  }
+
   try {
     const program = new Command();
     program
       .option('-m, --migrate', 'Migrate old measurement data into DB', false)
       .option('-c, --config <path>', 'Path to config file')
+      .option('-d, --debug', 'Enable debug logging', false)
       .parse();
 
     const options = program.opts();
 
-    const path = options.config;
+    if (options.config) {
+      dotenv.config({ path: options.config });
+      console.debug('Using config file: ' + options.config);
+    }
 
-    if (path) {
-      dotenv.config({ path });
-      console.debug('Using config file: ' + path);
+    if (!options.debug) {
+      console.debug = function () {};
     }
 
     const config: Config = {
       meterId: process.env.METER_ID!,
       tz: process.env.TZ!,
-      bucket: process.env.INFLUX_BUCKET!,
-      org: process.env.INFLUX_ORG!,
-      token: process.env.INFLUX_TOKEN!,
-      url: process.env.INFLUX_URL!,
+      influxBucket: process.env.INFLUX_BUCKET!,
+      influxOrg: process.env.INFLUX_ORG!,
+      influxToken: process.env.INFLUX_TOKEN!,
+      influxUrl: process.env.INFLUX_URL!,
       username: process.env.USERNAME!,
       password: process.env.PASSWORD!,
     };
 
-    const bot = new Bot(config);
+    const influxDb = new InfluxDB({
+      url: config.influxUrl,
+      token: config.influxToken,
+    });
+
+    const bot = new Bot(config, influxDb);
     await bot.ready;
 
-    // if (
-    //   !meterId ||
-    //   !tz ||
-    //   !bucket ||
-    //   !org ||
-    //   !token ||
-    //   !url ||
-    //   !username ||
-    //   !password
-    // ) {
-    //   throw new Error('Missing environment variables');
-    // }
+    for (const key of Object.keys(config)) {
+      if (!config[key as keyof Config]) {
+        throw new Error(
+          `Missing environment variable ${key
+            .replace(/[A-Z]/g, (letter) => `_${letter}`)
+            .toUpperCase()}`
+        );
+      }
+    }
 
     await bot.login();
 
     if (options.migrate) {
       await migrate({ bot, config });
     } else {
-      console.debug('TODO');
-      // await bot.load('06.03.2023');
+      await update({ bot, config, influxDb });
     }
 
     await bot.logout();

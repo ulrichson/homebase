@@ -157,6 +157,11 @@ cd ./databot
 LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
 ```
 
+```bash
+cd ./databot
+INFLUX_URL=http://localhost:8086 ts-node index.ts -c ../.env -d
+```
+
 For some reason the `pipenv` in the Docker environment won't work. Thus a `requirements.txt` file is used. To update it run `pip freeze > requirements.txt`.
 
 ## Commands
