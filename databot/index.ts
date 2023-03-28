@@ -5,7 +5,7 @@ import * as dotenv from 'dotenv';
 import moment from 'moment-timezone';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
-const dateFormat = 'MM.DD.YYYY';
+const dateFormat = 'DD.MM.YYYY';
 
 interface Config {
   meterId: string;
@@ -49,19 +49,84 @@ class Bot {
   }
 
   /**
-   *
+   * Loads the consumption data for the given day
    * @param day - Date with format DD.MM.YYYY
    */
   async load(day: string) {
     if (!this.page || !this.browser) {
       throw new Error('Not initialized');
     }
-    console.log('Navigate to login');
+
+    console.debug('Navigate to consumption page');
+    await this.page.goto(
+      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml'
+    );
+
+    console.debug('Select "Viertelstundenwerte"');
+    await this.page.click(
+      'label[for="myForm1:j_idt1247:grid_eval:selectedClass:1"]'
+    );
+    await this.page.waitForSelector(
+      'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
+    );
+
+    console.debug('Enter date range');
+    const input = await this.page.$('#myForm1\\:calendarFromRegion');
+    await input?.click({ clickCount: 2 });
+    await input?.type(day);
+    await this.page.keyboard.press('Enter');
+    await new Promise((r) => setTimeout(r, 500));
+
+    const fromValue = await this.page.$eval(
+      '#myForm1\\:calendarFromRegion',
+      (el) => (<any>el).value
+    );
+    const toValue = await this.page.$eval(
+      '#myForm1\\:calendarToRegion',
+      (el) => (<any>el).value
+    );
+
+    console.debug('Date input from value: ' + fromValue);
+    console.debug('Date input to value: ' + toValue);
+
+    if (day !== fromValue || day !== toValue) {
+      throw new Error('Date input not set correctly');
+    }
+
+    try {
+      console.debug('Select "Energiemenge in kWh"');
+      // No need to click, it's pre-selected
+      // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
+      await this.downloadResult();
+
+      console.debug('Select "Leistung in kW"');
+      this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
+      await this.page.waitForResponse((response) => {
+        return response.request().url().includes('/consumption.jsf');
+      });
+      await this.downloadResult();
+    } catch {
+      console.warn(`No measurement data for ${day}`);
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Login
+   */
+  async login() {
+    if (!this.page || !this.browser) {
+      throw new Error('Not initialized');
+    }
+
+    console.debug('Navigate to login');
     await this.page.goto('https://www.linznetz.at');
     await this.page.click('#loginFormTemplateHeader\\:doLogin');
     await this.page.waitForNavigation();
 
-    console.log('Enter credentials');
+    console.debug('Enter credentials');
     await this.page.type('#username', this.config.username);
     await this.page.type('#password', this.config.password);
 
@@ -71,59 +136,25 @@ class Bot {
     );
     await this.page.waitForNavigation();
 
-    console.log('Navigate to consumption page');
-    await this.page.goto(
-      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml'
-    );
+    console.info('Login successful');
+  }
 
-    console.log('Select "Viertelstundenwerte"');
-    await this.page.click(
-      'label[for="myForm1:j_idt1247:grid_eval:selectedClass:1"]'
-    );
-    await this.page.waitForSelector(
-      'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
-    );
+  /**
+   * Logout
+   */
+  async logout() {
+    if (!this.page || !this.browser) {
+      throw new Error('Not initialized');
+    }
 
-    console.log('Enter date range');
-    const input = await this.page.$('#myForm1\\:calendarFromRegion');
-    await input?.click({ clickCount: 2 });
-    await input?.type(day);
-    await this.page.keyboard.press('Enter');
-    await new Promise((r) => setTimeout(r, 300));
-
-    console.log(
-      'Date input from value: ' +
-        (await this.page.$eval(
-          '#myForm1\\:calendarFromRegion',
-          (el) => (<any>el).value
-        ))
-    );
-    console.log(
-      'Date input to value: ' +
-        (await this.page.$eval(
-          '#myForm1\\:calendarToRegion',
-          (el) => (<any>el).value
-        ))
-    );
-
-    console.log('Select "Energiemenge in kWh"');
-    // No need to click, it's pre-selected
-    // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
-    await this.downloadResult();
-
-    console.log('Select "Leistung in kW"');
-    this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
-    await this.page.waitForResponse((response) => {
-      return response.request().url().includes('/consumption.jsf');
-    });
-    await this.downloadResult();
-
-    console.log('Logout');
+    console.debug('Logout');
     await this.page.goto(
       'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
     );
 
     await this.browser.close();
+
+    console.info('Logout successful');
   }
 
   private async downloadResult() {
@@ -131,17 +162,18 @@ class Bot {
       throw new Error('Not initialized');
     }
 
-    console.log('Click "Anzeigen"');
+    console.debug('Click "Anzeigen"');
     await this.page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
-    console.log('Wait for result');
+    console.debug('Wait for result');
     await this.page.waitForResponse((response) => {
       return response.request().url().includes('/consumption.jsf');
     });
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
+
     while (hasNext) {
       const pageTableData = await this.tableToJson(
         '#myForm1\\:consumptionsTable table'
@@ -165,7 +197,7 @@ class Bot {
       }
     }
 
-    console.log(`Received ${tableData.rows.length} data rows`);
+    console.debug(`Received ${tableData.rows.length} data rows`);
   }
 
   private async tableToJson(tableSelector: string): Promise<TableData> {
@@ -208,20 +240,20 @@ class Bot {
 }
 
 async function main() {
-  function migrate({ bot, config }: { bot: Bot; config: Config }) {
+  async function migrate({ bot, config }: { bot: Bot; config: Config }) {
     let deltaDays = 1;
     let hasNext = true;
     const maxFailedAttempts = 3;
     let failedAttempts = 0;
     let allowedEmptyDays = 7;
-    console.log('Starting migrating old measurements');
+    console.debug('Starting migrating old measurements');
     while (hasNext) {
       const day = moment()
         .tz(config.tz)
         .subtract(deltaDays, 'days')
         .format(dateFormat);
       try {
-        if (!bot.load(day)) {
+        if (!(await bot.load(day))) {
           allowedEmptyDays -= 1;
         }
         deltaDays += 1;
@@ -231,7 +263,7 @@ async function main() {
       }
 
       if (failedAttempts >= maxFailedAttempts || allowedEmptyDays < 0) {
-        console.log('Stopping migration since no more data is present');
+        console.debug('Stopping migration since no more data is present');
         hasNext = false;
       }
     }
@@ -250,7 +282,7 @@ async function main() {
 
     if (path) {
       dotenv.config({ path });
-      console.log('Using config file: ' + path);
+      console.debug('Using config file: ' + path);
     }
 
     const config: Config = {
@@ -263,8 +295,6 @@ async function main() {
       username: process.env.USERNAME!,
       password: process.env.PASSWORD!,
     };
-
-    console.log(config);
 
     const bot = new Bot(config);
     await bot.ready;
@@ -282,8 +312,17 @@ async function main() {
     //   throw new Error('Missing environment variables');
     // }
 
-    // load(day);
-    await bot.load('2022-03-20');
+    await bot.login();
+
+    if (options.migrate) {
+      await migrate({ bot, config });
+    } else {
+      console.debug('TODO');
+      // await bot.load('06.03.2023');
+    }
+
+    await bot.logout();
+
     process.exit(0);
   } catch (err) {
     console.error((<Error>err).message);
