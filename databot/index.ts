@@ -245,6 +245,7 @@ class Bot {
     console.debug('Wait for result');
     // await this.page.waitForNetworkIdle();
     await new Promise((r) => setTimeout(r, 500));
+    await this.page.screenshot({ path: '/app/export/screenshot.png' });
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
