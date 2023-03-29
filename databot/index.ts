@@ -97,6 +97,12 @@ class Bot {
       'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
     );
 
+    // For some reason selecting the radio button does not work before date selection
+    console.debug('Select "Energiemenge in kWh"');
+    await this.page.click(
+      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+    );
+
     console.debug('Enter date range');
     const input = await this.page.$('#myForm1\\:calendarFromRegion');
     await input?.click({ clickCount: 2 });
@@ -121,24 +127,17 @@ class Bot {
     }
 
     try {
-      console.debug('Select "Energiemenge in kWh"');
-      // No need to click, it's pre-selected
-      // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
       const meteredValuesDataTable = await this.downloadResult();
 
       console.debug('Select "Leistung in kW"');
-      this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
-      await this.page.waitForResponse((response) => {
-        return response.request().url().includes('/consumption.jsf');
-      });
-
-      const nextButton = await this.page.$(
-        '#myForm1\\:consumptionsTable_paginator_bottom a.ui-paginator-next'
+      await this.page.click(
+        'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1"]'
       );
 
       console.debug('Reset pagination');
-      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
-
+      await this.page.click(
+        '.ui-paginator-pages > .ui-paginator-page:first-child'
+      );
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
@@ -170,6 +169,10 @@ class Bot {
         this.config.influxBucket,
         's'
       );
+      console.log(
+        meteredValuesDataTable.headers,
+        meteredPeakDemandsDataTable.headers
+      );
       writeApi.writePoints(data);
       writeApi.close();
       console.info(`Stored measurements in DB for ${day}`);
@@ -190,11 +193,11 @@ class Bot {
     }
 
     console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at', {
+    await this.page.goto('https://www.linznetz.at');
+    await this.page.click('#loginFormTemplateHeader\\:doLogin');
+    await this.page.waitForNavigation({
       waitUntil: 'domcontentloaded',
     });
-    await this.page.click('#loginFormTemplateHeader\\:doLogin');
-    await this.page.waitForNavigation();
 
     console.debug('Enter credentials');
     await this.page.type('#username', this.config.username);
@@ -240,9 +243,7 @@ class Bot {
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForResponse((response) => {
-      return response.request().url().includes('/consumption.jsf');
-    });
+    await this.page.waitForNetworkIdle();
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
