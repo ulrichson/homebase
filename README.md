@@ -171,7 +171,7 @@ For some reason the `pipenv` in the Docker environment won't work. Thus a `requi
 Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
 
 ```bash
-docker compose run --rm databot python3 load.py --migrate
+docker compose run --rm databot databot --migrate
 ```
 
 ### Archive previous week charts
