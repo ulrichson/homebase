@@ -86,22 +86,15 @@ class Bot {
 
     console.debug('Navigate to consumption page');
     await this.page.goto(
-      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml',
-      {
-        waitUntil: 'domcontentloaded',
-      }
+      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml'
     );
 
     console.debug('Select "Viertelstundenwerte"');
-    await this.page.screenshot({ path: '/app/export/screenshot.png' });
-    await this.page.waitForSelector(
-      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
-    );
     await this.page.click(
-      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
+      'label[for="myForm1:j_idt1247:grid_eval:selectedClass:1"]'
     );
     await this.page.waitForSelector(
-      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+      'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
     );
 
     console.debug('Enter date range');
@@ -134,9 +127,7 @@ class Bot {
       const meteredValuesDataTable = await this.downloadResult();
 
       console.debug('Select "Leistung in kW"');
-      this.page.click(
-        'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:1'
-      );
+      this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
@@ -207,9 +198,7 @@ class Bot {
     }
 
     console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at', {
-      waitUntil: 'domcontentloaded',
-    });
+    await this.page.goto('https://www.linznetz.at');
     await this.page.click('#loginFormTemplateHeader\\:doLogin');
     await this.page.waitForNavigation();
 
@@ -236,10 +225,7 @@ class Bot {
 
     console.debug('Navigate to logout');
     await this.page.goto(
-      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal',
-      {
-        waitUntil: 'domcontentloaded',
-      }
+      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
     );
 
     await this.browser.close();
