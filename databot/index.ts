@@ -127,7 +127,7 @@ class Bot {
     }
 
     try {
-      const meteredValuesDataTable = await this.downloadResult('Energie');
+      const meteredValuesDataTable = await this.downloadResult();
 
       console.debug('Select "Leistung in kW"');
       await this.page.click(
@@ -142,7 +142,7 @@ class Bot {
         return response.request().url().includes('/consumption.jsf');
       });
 
-      const meteredPeakDemandsDataTable = await this.downloadResult('Leistung');
+      const meteredPeakDemandsDataTable = await this.downloadResult();
 
       const data = [
         ...meteredPeakDemandsDataTable.rows.map((row) => {
@@ -233,7 +233,7 @@ class Bot {
     console.info('Logout successful');
   }
 
-  private async downloadResult(expect: 'Energie' | 'Leistung') {
+  private async downloadResult() {
     if (!this.page) {
       throw new Error('Not initialized');
     }
@@ -244,11 +244,6 @@ class Bot {
 
     console.debug('Wait for result');
     await this.page.waitForNetworkIdle();
-    await this.page.waitForFunction(
-      'document.querySelector(".ui-datatable-tablewrapper").innerText.includes("' +
-        expect +
-        '")'
-    );
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
