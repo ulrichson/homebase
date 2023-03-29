@@ -71,7 +71,7 @@ class Bot {
           executablePath: '/usr/bin/chromium',
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
-      : await puppeteer.launch();
+      : await puppeteer.launch({ headless: false });
     this.page = await this.browser.newPage();
   }
 
@@ -136,11 +136,25 @@ class Bot {
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
-      console.debug('Reset pagination');
-      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
-      await this.page.waitForResponse((response) => {
-        return response.request().url().includes('/consumption.jsf');
-      });
+
+      const nextButton = await this.page.$(
+        '#myForm1\\:consumptionsTable_paginator_bottom a.ui-paginator-next'
+      );
+
+      const hasNext =
+        !(await this.page.evaluate(
+          (el) => el?.classList.contains('ui-state-disabled'),
+          nextButton
+        )) ?? false;
+
+      if (hasNext) {
+        console.debug('Reset pagination');
+        this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
+
+        await this.page.waitForResponse((response) => {
+          return response.request().url().includes('/consumption.jsf');
+        });
+      }
 
       const meteredPeakDemandsDataTable = await this.downloadResult();
 
