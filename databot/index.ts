@@ -93,6 +93,9 @@ class Bot {
     );
 
     console.debug('Select "Viertelstundenwerte"');
+    await this.page.waitForSelector(
+      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
+    );
     await this.page.click(
       'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
     );
