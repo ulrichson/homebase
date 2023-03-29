@@ -1,9 +1,8 @@
-FROM ghcr.io/puppeteer/puppeteer:latest 
-#python:3.9-slim
+FROM node:18
 
 # TODO: split into builder and runtime stages
 
-USER root
+# USER root
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     # build-essential 
@@ -11,13 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     cron \
     python3\
-    python3-pip
+    python3-pip \
+    chromium
 
-COPY --chown=pptruser:pptruser requirements.txt /app/
-COPY --chown=pptruser:pptruser *.py /app
-COPY --chown=pptruser:pptruser *.sh /app
-COPY --chown=pptruser:pptruser *.json /app
-COPY --chown=pptruser:pptruser *.ts /app
+COPY requirements.txt /app/
+COPY *.py /app
+COPY *.sh /app
+COPY *.json /app
+COPY *.ts /app
 WORKDIR /app
 
 # Install python dependencies
@@ -39,8 +39,8 @@ RUN chmod +x /app/index.js
 # RUN chmod 777 /var/run/crond.pid
 
 # Cron as non-root user
-RUN chmod gu+rw /var/run
-RUN chmod gu+s /usr/sbin/cron
+# RUN chmod gu+rw /var/run
+# RUN chmod gu+s /usr/sbin/cron
 
 # Load and render smartmeter data every 5 minutes
 RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
@@ -48,6 +48,6 @@ RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc
 # Archive charts weekly (at 00:00 on Thursday)
 RUN crontab -l | { cat; echo "0 0 * * 4 /bin/bash /app/cron_archive.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
-USER pptruser
+# USER pptruser
 
 CMD [ "/app/start.sh" ]

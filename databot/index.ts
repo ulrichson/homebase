@@ -4,8 +4,29 @@ import { InfluxDB, Point } from '@influxdata/influxdb-client';
 import { Command } from 'commander';
 import * as dotenv from 'dotenv';
 import moment from 'moment-timezone';
+import fs from 'node:fs';
 import puppeteer, { Browser, Page } from 'puppeteer';
 
+function hasDockerEnv() {
+  try {
+    fs.statSync('/.dockerenv');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function hasDockerCGroup() {
+  try {
+    return fs.readFileSync('/proc/self/cgroup', 'utf8').includes('docker');
+  } catch {
+    return false;
+  }
+}
+
+function isDocker() {
+  return hasDockerEnv() || hasDockerCGroup();
+}
 const dateFormat = 'DD.MM.YYYY';
 
 interface Config {
@@ -45,9 +66,12 @@ class Bot {
   }
 
   private async init() {
-    this.browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    this.browser = isDocker()
+      ? await puppeteer.launch({
+          executablePath: '/usr/bin/chromium',
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        })
+      : await puppeteer.launch();
     this.page = await this.browser.newPage();
   }
 
