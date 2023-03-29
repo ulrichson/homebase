@@ -271,7 +271,9 @@ class Bot {
         )) ?? false;
       if (hasNext) {
         await nextButton?.click();
-        await this.page.waitForNetworkIdle();
+        await this.page.waitForResponse((response) => {
+          return response.request().url().includes('/consumption.jsf');
+        });
       }
     }
 
