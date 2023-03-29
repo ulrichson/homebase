@@ -91,10 +91,10 @@ class Bot {
 
     console.debug('Select "Viertelstundenwerte"');
     await this.page.click(
-      'label[for="myForm1:j_idt1247:grid_eval:selectedClass:1"]'
+      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
     );
     await this.page.waitForSelector(
-      'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
+      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
     );
 
     console.debug('Enter date range');
@@ -127,7 +127,9 @@ class Bot {
       const meteredValuesDataTable = await this.downloadResult();
 
       console.debug('Select "Leistung in kW"');
-      this.page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1');
+      this.page.click(
+        'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:1'
+      );
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
