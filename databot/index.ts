@@ -136,20 +136,12 @@ class Bot {
         '#myForm1\\:consumptionsTable_paginator_bottom a.ui-paginator-next'
       );
 
-      const hasNext =
-        !(await this.page.evaluate(
-          (el) => el?.classList.contains('ui-state-disabled'),
-          nextButton
-        )) ?? false;
+      console.debug('Reset pagination');
+      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
 
-      if (hasNext) {
-        console.debug('Reset pagination');
-        this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
-
-        await this.page.waitForResponse((response) => {
-          return response.request().url().includes('/consumption.jsf');
-        });
-      }
+      await this.page.waitForResponse((response) => {
+        return response.request().url().includes('/consumption.jsf');
+      });
 
       const meteredPeakDemandsDataTable = await this.downloadResult();
 
@@ -227,7 +219,10 @@ class Bot {
 
     console.debug('Navigate to logout');
     await this.page.goto(
-      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
+      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal',
+      {
+        waitUntil: 'domcontentloaded',
+      }
     );
 
     await this.browser.close();
