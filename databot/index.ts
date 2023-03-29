@@ -108,7 +108,7 @@ class Bot {
     await input?.click({ clickCount: 2 });
     await input?.type(day);
     await this.page.keyboard.press('Enter');
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 500));
 
     const fromValue = await this.page.$eval(
       '#myForm1\\:calendarFromRegion',
@@ -243,7 +243,8 @@ class Bot {
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForNetworkIdle();
+    // await this.page.waitForNetworkIdle();
+    await new Promise((r) => setTimeout(r, 500));
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
