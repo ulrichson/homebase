@@ -169,10 +169,10 @@ class Bot {
         this.config.influxBucket,
         's'
       );
-      console.log(
-        meteredValuesDataTable.headers,
-        meteredPeakDemandsDataTable.headers
-      );
+      // console.log(
+      //   meteredValuesDataTable.headers,
+      //   meteredPeakDemandsDataTable.headers
+      // );
       writeApi.writePoints(data);
       writeApi.close();
       console.info(`Stored measurements in DB for ${day}`);
