@@ -102,7 +102,7 @@ class Bot {
     await input?.click({ clickCount: 2 });
     await input?.type(day);
     await this.page.keyboard.press('Enter');
-    await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 1000));
 
     const fromValue = await this.page.$eval(
       '#myForm1\\:calendarFromRegion',
