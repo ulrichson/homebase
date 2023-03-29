@@ -86,7 +86,10 @@ class Bot {
 
     console.debug('Navigate to consumption page');
     await this.page.goto(
-      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml'
+      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml',
+      {
+        waitUntil: 'domcontentloaded',
+      }
     );
 
     console.debug('Select "Viertelstundenwerte"');
@@ -186,7 +189,9 @@ class Bot {
     }
 
     console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at');
+    await this.page.goto('https://www.linznetz.at', {
+      waitUntil: 'domcontentloaded',
+    });
     await this.page.click('#loginFormTemplateHeader\\:doLogin');
     await this.page.waitForNavigation();
 
@@ -213,7 +218,10 @@ class Bot {
 
     console.debug('Navigate to logout');
     await this.page.goto(
-      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal'
+      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal',
+      {
+        waitUntil: 'domcontentloaded',
+      }
     );
 
     await this.browser.close();
