@@ -198,7 +198,9 @@ class Bot {
     }
 
     console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at');
+    await this.page.goto('https://www.linznetz.at', {
+      waitUntil: 'domcontentloaded',
+    });
     await this.page.click('#loginFormTemplateHeader\\:doLogin');
     await this.page.waitForNavigation();
 
