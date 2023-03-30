@@ -13,11 +13,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     chromium
 
-COPY requirements.txt /app/
-COPY *.py /app
-COPY *.sh /app
-COPY *.json /app
-COPY *.ts /app
+RUN groupadd -r appuser && useradd -rm -g appuser -G audio,video appuser
+
+COPY --chown=appuser:appuser requirements.txt /app/
+COPY --chown=appuser:appuser *.py /app
+COPY --chown=appuser:appuser *.sh /app
+COPY --chown=appuser:appuser *.json /app
+COPY --chown=appuser:appuser *.ts /app
 WORKDIR /app
 
 # Install python dependencies
@@ -39,8 +41,8 @@ RUN chmod +x /app/index.js
 # RUN chmod 777 /var/run/crond.pid
 
 # Cron as non-root user
-# RUN chmod gu+rw /var/run
-# RUN chmod gu+s /usr/sbin/cron
+RUN chmod gu+rw /var/run
+RUN chmod gu+s /usr/sbin/cron
 
 # Load and render smartmeter data every 5 minutes
 RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
@@ -48,6 +50,6 @@ RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc
 # Archive charts weekly (at 00:00 on Thursday)
 RUN crontab -l | { cat; echo "0 0 * * 4 /bin/bash /app/cron_archive.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
-# USER pptruser
+USER appuser
 
 CMD [ "/app/start.sh" ]
