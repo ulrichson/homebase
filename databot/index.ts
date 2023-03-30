@@ -212,7 +212,7 @@ class Bot {
         await page.screenshot({
           path: `/app/export/.error_${moment().format(
             'YYYY-MM-DD_hh-mm-ss'
-          )}_${new Date().getTime()}}.png`,
+          )}_${new Date().getTime()}.png`,
         });
       } catch {}
       return false;
