@@ -183,7 +183,9 @@ class Bot {
       console.debug((<Error>err).stack);
       try {
         await this.page.screenshot({
-          path: `export/_error_${moment().format('YYYY-MM-DD_hh-mm-ss')}.png`,
+          path: `exporrt/error/${moment().format(
+            'YYYY-MM-DD_hh-mm-ss'
+          )}_${new Date().getTime()}}.png`,
         });
       } catch {}
       return false;
