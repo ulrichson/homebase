@@ -71,7 +71,7 @@ class Bot {
           executablePath: '/usr/bin/chromium',
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
-      : await puppeteer.launch({ headless: false });
+      : await puppeteer.launch({ headless: true });
     this.page = await this.browser.newPage();
 
     this.page.on('console', (msg) =>
@@ -107,10 +107,13 @@ class Bot {
     );
 
     // For some reason selecting the radio button does not work before date selection
-    // console.debug('Select "Energiemenge in kWh"');
-    // await this.page.click(
-    //   'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
-    // );
+    console.debug('Select "Energiemenge in kWh"');
+    await this.page.click(
+      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+    );
+    await this.page.waitForResponse((response) => {
+      return response.request().url().includes('/consumption.jsf');
+    });
 
     console.debug('Enter date range');
     const input = await this.page.$('#myForm1\\:calendarFromRegion');
@@ -267,9 +270,9 @@ class Bot {
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForResponse((response) => {
-      return response.request().url().includes('/consumption.jsf');
-    });
+    // await this.page.waitForResponse((response) => {
+    //   return response.request().url().includes('/consumption.jsf');
+    // });
     // await this.page.waitForFunction(
     //   `document.querySelector("body").innerText.includes("${expect}")`
     // );
@@ -277,7 +280,7 @@ class Bot {
     // await this.page.waitForResponse((response) => {
     //   return response.request().url().includes('/consumption.jsf');
     // });
-    // await new Promise((r) => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500));
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
