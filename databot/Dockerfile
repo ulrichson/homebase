@@ -13,13 +13,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     chromium
 
-RUN groupadd -r appuser && useradd -rm -g appuser -G audio,video appuser
+# RUN groupadd -r appuser && useradd -rm -g appuser -G audio,video appuser
 
-COPY --chown=appuser:appuser requirements.txt /app/
-COPY --chown=appuser:appuser *.py /app
-COPY --chown=appuser:appuser *.sh /app
-COPY --chown=appuser:appuser *.json /app
-COPY --chown=appuser:appuser *.ts /app
+# COPY --chown=appuser:appuser requirements.txt /app/
+# COPY --chown=appuser:appuser *.py /app
+# COPY --chown=appuser:appuser *.sh /app
+# COPY --chown=appuser:appuser *.json /app
+# COPY --chown=appuser:appuser *.ts /app
+COPY requirements.txt /app/
+COPY *.py /app
+COPY *.sh /app
+COPY *.json /app
+COPY *.ts /app
 WORKDIR /app
 
 # Install python dependencies
@@ -33,14 +38,16 @@ RUN npm install
 RUN npm run build
 RUN npm install -g
 
-# Permissions for cron job as non-root user
+# Permissions for cron job
 RUN chmod 0644 /app/*.sh
 RUN chmod +x /app/start.sh
 RUN chmod +x /app/index.js
-RUN chmod gu+rw /var/run
-RUN chmod gu+s /usr/sbin/cron
 
-USER appuser
+# Permnissions for cron as non-root user
+# RUN chmod gu+rw /var/run
+# RUN chmod gu+s /usr/sbin/cron
+
+# USER appuser
 
 # Load and render smartmeter data every 5 minutes
 RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
