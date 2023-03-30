@@ -343,7 +343,7 @@ async function main() {
     const maxFailedAttempts = 3;
     let failedAttempts = 0;
     let allowedEmptyDays = 7;
-    console.debug('Starting migrating old measurements');
+    console.info('Starting migrating old measurements');
     while (hasNext) {
       const day = moment()
         .tz(config.tz)
