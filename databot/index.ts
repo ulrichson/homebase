@@ -103,14 +103,14 @@ class Bot {
       'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
     );
     await this.page.waitForSelector(
-      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"'
+      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
     );
 
     // For some reason selecting the radio button does not work before date selection
-    console.debug('Select "Energiemenge in kWh"');
-    await this.page.click(
-      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
-    );
+    // console.debug('Select "Energiemenge in kWh"');
+    // await this.page.click(
+    //   'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+    // );
 
     console.debug('Enter date range');
     const input = await this.page.$('#myForm1\\:calendarFromRegion');
@@ -136,6 +136,9 @@ class Bot {
     }
 
     try {
+      // console.debug('Select "Energiemenge in kWh"');
+      // No need to click, it's pre-selected
+      // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
       const meteredValuesDataTable =
         await this.downloadResult(/*'Energiemenge'*/);
 
@@ -260,9 +263,13 @@ class Bot {
     }
 
     console.debug('Click "Anzeigen"');
+    // await this.page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
+    await this.page.waitForResponse((response) => {
+      return response.request().url().includes('/consumption.jsf');
+    });
     // await this.page.waitForFunction(
     //   `document.querySelector("body").innerText.includes("${expect}")`
     // );
@@ -270,7 +277,7 @@ class Bot {
     // await this.page.waitForResponse((response) => {
     //   return response.request().url().includes('/consumption.jsf');
     // });
-    await new Promise((r) => setTimeout(r, 500));
+    // await new Promise((r) => setTimeout(r, 500));
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
@@ -294,9 +301,10 @@ class Bot {
         )) ?? false;
       if (hasNext) {
         await nextButton?.click();
-        await this.page.waitForResponse((response) => {
-          return response.request().url().includes('/consumption.jsf');
-        });
+        // await this.page.waitForResponse((response) => {
+        //   return response.request().url().includes('/consumption.jsf');
+        // });
+        await this.page.waitForNetworkIdle();
       }
     }
 
