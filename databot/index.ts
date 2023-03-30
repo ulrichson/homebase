@@ -176,8 +176,9 @@ class Bot {
       writeApi.writePoints(data);
       writeApi.close();
       console.info(`Stored measurements in DB for ${day}`);
-    } catch {
+    } catch (err) {
       console.warn(`No measurement data for ${day}`);
+      console.debug((<Error>err).stack);
       return false;
     }
 
