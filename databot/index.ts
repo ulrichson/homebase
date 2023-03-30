@@ -246,8 +246,8 @@ class Bot {
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForNetworkIdle();
-    // await new Promise((r) => setTimeout(r, 500));
+    // await this.page.waitForNetworkIdle();
+    await new Promise((r) => setTimeout(r, 1000));
     await this.page.screenshot({ path: '/app/export/screenshot.png' });
 
     let hasNext = true;
