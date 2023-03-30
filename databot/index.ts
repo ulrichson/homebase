@@ -69,12 +69,7 @@ class Bot {
     this.browser = isDocker()
       ? await puppeteer.launch({
           executablePath: '/usr/bin/chromium',
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-gpu',
-            '--disable-dev-shm-usage',
-          ],
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
       : await puppeteer.launch({ headless: false });
     this.page = await this.browser.newPage();
@@ -141,22 +136,22 @@ class Bot {
     }
 
     try {
-      const meteredValuesDataTable = await this.downloadResult();
+      const meteredValuesDataTable = await this.downloadResult('Energiemenge');
 
       console.debug('Select "Leistung in kW"');
-      await this.page.click(
-        'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:1"]'
-      );
-
-      console.debug('Reset pagination');
-      await this.page.click(
-        '.ui-paginator-pages > .ui-paginator-page:first-child'
+      this.page.click(
+        'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:1'
       );
       await this.page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
+      console.debug('Reset pagination');
+      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
+      await this.page.waitForResponse((response) => {
+        return response.request().url().includes('/consumption.jsf');
+      });
 
-      const meteredPeakDemandsDataTable = await this.downloadResult();
+      const meteredPeakDemandsDataTable = await this.downloadResult('Leistung');
 
       const data = [
         ...meteredPeakDemandsDataTable.rows.map((row) => {
@@ -215,7 +210,9 @@ class Bot {
     }
 
     console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at');
+    await this.page.goto('https://www.linznetz.at', {
+      waitUntil: 'domcontentloaded',
+    });
     await this.page.click('#loginFormTemplateHeader\\:doLogin');
     await this.page.waitForNavigation({
       waitUntil: 'domcontentloaded',
@@ -255,23 +252,27 @@ class Bot {
     console.info('Logout successful');
   }
 
-  private async downloadResult() {
+  private async downloadResult(expect: 'Energiemenge' | 'Leistung') {
     if (!this.page) {
       throw new Error('Not initialized');
     }
 
     console.debug('Click "Anzeigen"');
-    await this.page.click('#myForm1 input[type="button"]'); // Button "Anzeigen"
+    await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForNetworkIdle();
-    // await new Promise((r) => setTimeout(r, 1000));
+    await this.page.waitForFunction(
+      `document.querySelector("body").innerText.includes("${expect}")`
+    );
+    // await this.page.waitForNetworkIdle();
+    // await this.page.waitForResponse((response) => {
+    //   return response.request().url().includes('/consumption.jsf');
+    // });
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
 
     while (hasNext) {
-      console.debug('Parsing table data');
       const pageTableData = await this.tableToJson(
         '#myForm1\\:consumptionsTable table'
       );
@@ -290,9 +291,7 @@ class Bot {
         )) ?? false;
       if (hasNext) {
         await nextButton?.click();
-        await this.page.waitForResponse((response) => {
-          return response.request().url().includes('/consumption.jsf');
-        });
+        await this.page.waitForNetworkIdle();
       }
     }
 
@@ -362,8 +361,7 @@ async function main() {
         deltaDays += 1;
       } catch (err) {
         failedAttempts += 1;
-        console.error((<Error>err).message);
-        console.debug((<Error>err).stack);
+        console.error(err);
       }
 
       if (failedAttempts >= maxFailedAttempts || allowedEmptyDays < 0) {
@@ -402,7 +400,6 @@ async function main() {
       }
     } catch (err) {
       console.error((<Error>err).message);
-      console.debug((<Error>err).stack);
     }
   }
 
@@ -467,7 +464,6 @@ async function main() {
     process.exit(0);
   } catch (err) {
     console.error((<Error>err).message);
-    console.debug((<Error>err).stack);
     process.exit(1);
   }
 }
