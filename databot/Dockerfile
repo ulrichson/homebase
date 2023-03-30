@@ -44,12 +44,12 @@ RUN chmod +x /app/index.js
 RUN chmod gu+rw /var/run
 RUN chmod gu+s /usr/sbin/cron
 
+USER appuser
+
 # Load and render smartmeter data every 5 minutes
 RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
 # Archive charts weekly (at 00:00 on Thursday)
 RUN crontab -l | { cat; echo "0 0 * * 4 /bin/bash /app/cron_archive.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
-
-USER appuser
 
 CMD [ "/app/start.sh" ]
