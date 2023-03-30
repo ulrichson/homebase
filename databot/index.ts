@@ -341,7 +341,8 @@ async function main() {
         deltaDays += 1;
       } catch (err) {
         failedAttempts += 1;
-        console.error(err);
+        console.error((<Error>err).message);
+        console.debug((<Error>err).stack);
       }
 
       if (failedAttempts >= maxFailedAttempts || allowedEmptyDays < 0) {
@@ -380,6 +381,7 @@ async function main() {
       }
     } catch (err) {
       console.error((<Error>err).message);
+      console.debug((<Error>err).stack);
     }
   }
 
@@ -444,6 +446,7 @@ async function main() {
     process.exit(0);
   } catch (err) {
     console.error((<Error>err).message);
+    console.debug((<Error>err).stack);
     process.exit(1);
   }
 }
