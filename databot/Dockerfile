@@ -33,14 +33,10 @@ RUN npm install
 RUN npm run build
 RUN npm install -g
 
-# Permissions for cron job
+# Permissions for cron job as non-root user
 RUN chmod 0644 /app/*.sh
 RUN chmod +x /app/start.sh
 RUN chmod +x /app/index.js
-# RUN touch /var/run/crond.pid
-# RUN chmod 777 /var/run/crond.pid
-
-# Cron as non-root user
 RUN chmod gu+rw /var/run
 RUN chmod gu+s /usr/sbin/cron
 
