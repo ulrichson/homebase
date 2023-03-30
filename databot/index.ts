@@ -249,6 +249,7 @@ class Bot {
     console.debug('Click "Anzeigen"');
     await this.page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
     await this.page.click('#myForm1\\:btnIdA1', { delay: 300 }); // Button "Anzeigen"
+    await this.page.click('#myForm1\\:btnIdA1', { delay: 300 }); // Button "Anzeigen"
 
     console.debug('Wait for result');
     await this.page.waitForNetworkIdle();
