@@ -78,6 +78,8 @@ class Bot {
   /**
    * Loads the consumption data for the given day
    * @param day - Date with format DD.MM.YYYY
+   *
+   * @returns Whether the data was loaded successfully
    */
   async load(day: string) {
     if (!this.page || !this.browser) {
