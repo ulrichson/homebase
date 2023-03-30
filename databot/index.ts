@@ -71,7 +71,7 @@ class Bot {
           executablePath: '/usr/bin/chromium',
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
-      : await puppeteer.launch({ headless: false });
+      : await puppeteer.launch({ headless: true });
     this.page = await this.browser.newPage();
 
     this.page.on('console', (msg) =>
@@ -136,7 +136,8 @@ class Bot {
     }
 
     try {
-      const meteredValuesDataTable = await this.downloadResult('Energiemenge');
+      const meteredValuesDataTable =
+        await this.downloadResult(/*'Energiemenge'*/);
 
       console.debug('Select "Leistung in kW"');
       this.page.click(
@@ -151,7 +152,8 @@ class Bot {
         return response.request().url().includes('/consumption.jsf');
       });
 
-      const meteredPeakDemandsDataTable = await this.downloadResult('Leistung');
+      const meteredPeakDemandsDataTable =
+        await this.downloadResult(/*'Leistung'*/);
 
       const data = [
         ...meteredPeakDemandsDataTable.rows.map((row) => {
@@ -252,7 +254,7 @@ class Bot {
     console.info('Logout successful');
   }
 
-  private async downloadResult(expect: 'Energiemenge' | 'Leistung') {
+  private async downloadResult(/*expect: 'Energiemenge' | 'Leistung'*/) {
     if (!this.page) {
       throw new Error('Not initialized');
     }
@@ -261,13 +263,14 @@ class Bot {
     await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForFunction(
-      `document.querySelector("body").innerText.includes("${expect}")`
-    );
+    // await this.page.waitForFunction(
+    //   `document.querySelector("body").innerText.includes("${expect}")`
+    // );
     // await this.page.waitForNetworkIdle();
     // await this.page.waitForResponse((response) => {
     //   return response.request().url().includes('/consumption.jsf');
     // });
+    await new Promise((r) => setTimeout(r, 500));
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
