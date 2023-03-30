@@ -71,7 +71,7 @@ class Bot {
           executablePath: '/usr/bin/chromium',
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
-      : await puppeteer.launch({ headless: true });
+      : await puppeteer.launch({ headless: false });
     this.page = await this.browser.newPage();
 
     this.page.on('console', (msg) =>
@@ -294,7 +294,9 @@ class Bot {
         )) ?? false;
       if (hasNext) {
         await nextButton?.click();
-        await this.page.waitForNetworkIdle();
+        await this.page.waitForResponse((response) => {
+          return response.request().url().includes('/consumption.jsf');
+        });
       }
     }
 
