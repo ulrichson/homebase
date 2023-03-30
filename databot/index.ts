@@ -50,33 +50,19 @@ interface TableData {
 }
 
 class Bot {
-  public readonly ready: Promise<void>;
-  private browser?: Browser;
-  private page?: Page;
+  // public readonly ready: Promise<void>;
+  // private browser?: Browser;
+  // private page?: Page;
 
   constructor(private config: Config, private influxDb: InfluxDB) {
-    this.ready = new Promise(async (resolve, reject) => {
-      try {
-        await this.init();
-        resolve();
-      } catch (e) {
-        reject(e);
-      }
-    });
-  }
-
-  private async init() {
-    this.browser = isDocker()
-      ? await puppeteer.launch({
-          executablePath: '/usr/bin/chromium',
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        })
-      : await puppeteer.launch({ headless: false });
-    this.page = await this.browser.newPage();
-
-    this.page.on('console', (msg) =>
-      console.debug('BROWSER DEBUG: ', msg.text())
-    );
+    // this.ready = new Promise(async (resolve, reject) => {
+    //   try {
+    //     await this.init();
+    //     resolve();
+    //   } catch (e) {
+    //     reject(e);
+    //   }
+    // });
   }
 
   /**
@@ -86,12 +72,39 @@ class Bot {
    * @returns Whether the data was loaded successfully
    */
   async load(day: string) {
-    if (!this.page || !this.browser) {
-      throw new Error('Not initialized');
-    }
+    const browser = isDocker()
+      ? await puppeteer.launch({
+          executablePath: '/usr/bin/chromium',
+          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        })
+      : await puppeteer.launch({ headless: false });
+    const page = await browser.newPage();
+
+    page.on('console', (msg) => console.debug('BROWSER DEBUG: ', msg.text()));
+
+    console.debug('Navigate to login');
+    await page.goto('https://www.linznetz.at', {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.click('#loginFormTemplateHeader\\:doLogin');
+    await page.waitForNavigation({
+      waitUntil: 'domcontentloaded',
+    });
+
+    console.debug('Enter credentials');
+    await page.type('#username', this.config.username);
+    await page.type('#password', this.config.password);
+
+    await page.evaluate(
+      (form) => form?.submit(),
+      await page.$('form[name="loginForm"]')
+    );
+    await page.waitForNavigation();
+
+    console.info('Login successful');
 
     console.debug('Navigate to consumption page');
-    await this.page.goto(
+    await page.goto(
       'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml',
       {
         waitUntil: 'domcontentloaded',
@@ -99,31 +112,31 @@ class Bot {
     );
 
     console.debug('Select "Viertelstundenwerte"');
-    await this.page.click(
+    await page.click(
       'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
     );
-    await this.page.waitForSelector(
+    await page.waitForSelector(
       'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
     );
 
     // For some reason selecting the radio button does not work before date selection
     // console.debug('Select "Energiemenge in kWh"');
-    // await this.page.click(
+    // await page.click(
     //   'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
     // );
 
     console.debug('Enter date range');
-    const input = await this.page.$('#myForm1\\:calendarFromRegion');
+    const input = await page.$('#myForm1\\:calendarFromRegion');
     await input?.click({ clickCount: 2 });
     await input?.type(day);
-    await this.page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
     await new Promise((r) => setTimeout(r, 500));
 
-    const fromValue = await this.page.$eval(
+    const fromValue = await page.$eval(
       '#myForm1\\:calendarFromRegion',
       (el) => (<any>el).value
     );
-    const toValue = await this.page.$eval(
+    const toValue = await page.$eval(
       '#myForm1\\:calendarToRegion',
       (el) => (<any>el).value
     );
@@ -136,27 +149,29 @@ class Bot {
     }
 
     try {
-      // console.debug('Select "Energiemenge in kWh"');
+      console.debug('Select "Energiemenge in kWh"');
       // No need to click, it's pre-selected
       // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
-      const meteredValuesDataTable =
-        await this.downloadResult(/*'Energiemenge'*/);
+      const meteredValuesDataTable = await this.downloadResult(
+        page /*'Energiemenge'*/
+      );
 
       console.debug('Select "Leistung in kW"');
-      this.page.click(
+      page.click(
         'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:1'
       );
-      await this.page.waitForResponse((response) => {
+      await page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
       console.debug('Reset pagination');
-      this.page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
-      await this.page.waitForResponse((response) => {
+      page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
+      await page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
 
-      const meteredPeakDemandsDataTable =
-        await this.downloadResult(/*'Leistung'*/);
+      const meteredPeakDemandsDataTable = await this.downloadResult(
+        page /*'Leistung'*/
+      );
 
       const data = [
         ...meteredPeakDemandsDataTable.rows.map((row) => {
@@ -194,7 +209,7 @@ class Bot {
       console.warn(`No measurement data for ${day}`);
       console.debug((<Error>err).stack);
       try {
-        await this.page.screenshot({
+        await page.screenshot({
           path: `/app/export/.error_${moment().format(
             'YYYY-MM-DD_hh-mm-ss'
           )}_${new Date().getTime()}}.png`,
@@ -203,78 +218,45 @@ class Bot {
       return false;
     }
 
+    try {
+      console.debug('Navigate to logout');
+      await page.goto(
+        'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal',
+        {
+          waitUntil: 'domcontentloaded',
+        }
+      );
+      await browser.close();
+
+      console.info('Logout successful');
+    } catch (err) {
+      console.warn(`Cannot logout`);
+      console.debug((<Error>err).stack);
+    }
+
     return true;
   }
 
-  /**
-   * Login
-   */
-  async login() {
-    if (!this.page || !this.browser) {
-      throw new Error('Not initialized');
-    }
-
-    console.debug('Navigate to login');
-    await this.page.goto('https://www.linznetz.at', {
-      waitUntil: 'domcontentloaded',
-    });
-    await this.page.click('#loginFormTemplateHeader\\:doLogin');
-    await this.page.waitForNavigation({
-      waitUntil: 'domcontentloaded',
-    });
-
-    console.debug('Enter credentials');
-    await this.page.type('#username', this.config.username);
-    await this.page.type('#password', this.config.password);
-
-    await this.page.evaluate(
-      (form) => form?.submit(),
-      await this.page.$('form[name="loginForm"]')
-    );
-    await this.page.waitForNavigation();
-
-    console.info('Login successful');
-  }
-
-  /**
-   * Logout
-   */
-  async logout() {
-    if (!this.page || !this.browser) {
-      throw new Error('Not initialized');
-    }
-
-    console.debug('Navigate to logout');
-    await this.page.goto(
-      'https://sso.linznetz.at/auth/realms/netzsso/protocol/openid-connect/logout?redirect_uri=https%3A%2F%2Fwww.linznetz.at%2Fportal%2Fde%2Fhome%2Fonline_services%2Fserviceportal',
-      {
-        waitUntil: 'domcontentloaded',
-      }
-    );
-
-    await this.browser.close();
-
-    console.info('Logout successful');
-  }
-
-  private async downloadResult(/*expect: 'Energiemenge' | 'Leistung'*/) {
-    if (!this.page) {
+  private async downloadResult(
+    page: Page /*, expect: 'Energiemenge' | 'Leistung'*/
+  ) {
+    if (!page) {
       throw new Error('Not initialized');
     }
 
     console.debug('Click "Anzeigen"');
-    // await this.page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
-    await this.page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
+    // await page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
+    await page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
 
     console.debug('Wait for result');
-    await this.page.waitForResponse((response) => {
+    await page.waitForResponse((response) => {
       return response.request().url().includes('/consumption.jsf');
     });
-    // await this.page.waitForFunction(
+    // await page.waitForFunction(
     //   `document.querySelector("body").innerText.includes("${expect}")`
     // );
-    // await this.page.waitForNetworkIdle();
-    // await this.page.waitForResponse((response) => {
+    // await page.waitForNetworkIdle();
+    // await page.waitForResponse((response) => {
     //   return response.request().url().includes('/consumption.jsf');
     // });
     // await new Promise((r) => setTimeout(r, 500));
@@ -284,27 +266,28 @@ class Bot {
 
     while (hasNext) {
       const pageTableData = await this.tableToJson(
+        page,
         '#myForm1\\:consumptionsTable table'
       );
 
       tableData.headers = pageTableData.headers;
       tableData.rows.push(...pageTableData.rows);
 
-      const nextButton = await this.page.$(
+      const nextButton = await page.$(
         '#myForm1\\:consumptionsTable_paginator_bottom a.ui-paginator-next'
       );
 
       hasNext =
-        !(await this.page.evaluate(
+        !(await page.evaluate(
           (el) => el?.classList.contains('ui-state-disabled'),
           nextButton
         )) ?? false;
       if (hasNext) {
         await nextButton?.click();
-        // await this.page.waitForResponse((response) => {
+        // await page.waitForResponse((response) => {
         //   return response.request().url().includes('/consumption.jsf');
         // });
-        await this.page.waitForNetworkIdle();
+        await page.waitForNetworkIdle();
       }
     }
 
@@ -313,12 +296,11 @@ class Bot {
     return tableData;
   }
 
-  private async tableToJson(tableSelector: string): Promise<TableData> {
-    if (!this.page) {
-      throw new Error('Not initialized');
-    }
-
-    const table = (await this.page.$$(tableSelector))[0];
+  private async tableToJson(
+    page: Page,
+    tableSelector: string
+  ): Promise<TableData> {
+    const table = (await page.$$(tableSelector))[0];
     const thead = await table.$('thead');
     const tbody = await table.$('tbody');
     const ths = await thead!.$$('th');
@@ -452,7 +434,6 @@ async function main() {
     });
 
     const bot = new Bot(config, influxDb);
-    await bot.ready;
 
     for (const key of Object.keys(config)) {
       if (!config[key as keyof Config]) {
@@ -464,15 +445,11 @@ async function main() {
       }
     }
 
-    await bot.login();
-
     if (options.migrate) {
       await migrate({ bot, config });
     } else {
       await update({ bot, config, influxDb });
     }
-
-    await bot.logout();
 
     process.exit(0);
   } catch (err) {
