@@ -78,6 +78,8 @@ class Bot {
         })
       : await puppeteer.launch({ headless: false });
     this.page = await this.browser.newPage();
+
+    this.page.on('console', (msg) => console.debug('PAGE debug:', msg.text()));
   }
 
   /**
