@@ -100,10 +100,10 @@ class Bot {
 
     console.debug('Select "Viertelstundenwerte"');
     await this.page.click(
-      'label[for="myForm1:j_idt1247:grid_eval:selectedClass:1"]'
+      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
     );
     await this.page.waitForSelector(
-      'label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]'
+      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"'
     );
 
     // For some reason selecting the radio button does not work before date selection
