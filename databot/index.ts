@@ -69,7 +69,12 @@ class Bot {
     this.browser = isDocker()
       ? await puppeteer.launch({
           executablePath: '/usr/bin/chromium',
-          args: ['--no-sandbox', '--disable-setuid-sandbox'],
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-gpu',
+            '--disable-dev-shm-usage',
+          ],
         })
       : await puppeteer.launch({ headless: false });
     this.page = await this.browser.newPage();
