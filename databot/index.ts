@@ -264,6 +264,7 @@ class Bot {
     const tableData: TableData = { headers: [], rows: [] };
 
     while (hasNext) {
+      console.debug('Parsing table data');
       const pageTableData = await this.tableToJson(
         '#myForm1\\:consumptionsTable table'
       );
