@@ -181,6 +181,9 @@ class Bot {
     } catch (err) {
       console.warn(`No measurement data for ${day}`);
       console.debug((<Error>err).stack);
+      await this.page.screenshot({
+        path: `export/_error_${moment().format('YYYY-MM-DD_hh:mm')}.png`,
+      });
       return false;
     }
 
@@ -248,7 +251,6 @@ class Bot {
     console.debug('Wait for result');
     await this.page.waitForNetworkIdle();
     // await new Promise((r) => setTimeout(r, 1000));
-    await this.page.screenshot({ path: '/app/export/screenshot.png' });
 
     let hasNext = true;
     const tableData: TableData = { headers: [], rows: [] };
