@@ -97,7 +97,10 @@ class Bot {
 
     console.debug('Navigate to consumption page');
     await this.page.goto(
-      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml'
+      'https://www.linznetz.at/portal/start.app?id=8&nav=/de_1/linz_netz_website/online_services/serviceportal/meine_verbraeuche/verbrauchsdateninformation/verbrauchsdateninformation.nav.xhtml',
+      {
+        waitUntil: 'domcontentloaded',
+      }
     );
 
     console.debug('Select "Viertelstundenwerte"');
