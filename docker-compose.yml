@@ -2,6 +2,7 @@ version: '3.9'
 
 services:
   databot:
+    # platform: linux/arm64/v8
     build: ./databot
     container_name: databot
     environment:
