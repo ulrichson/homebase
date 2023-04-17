@@ -5,7 +5,7 @@ import { Command } from 'commander';
 import * as dotenv from 'dotenv';
 import moment from 'moment-timezone';
 import fs from 'node:fs';
-import puppeteer, { Browser, Page } from 'puppeteer';
+import puppeteer, { Page } from 'puppeteer';
 
 function hasDockerEnv() {
   try {
@@ -38,6 +38,7 @@ interface Config {
   influxUrl: string;
   username: string;
   password: string;
+  debug: boolean;
 }
 
 interface TableRow {
@@ -208,13 +209,15 @@ class Bot {
     } catch (err) {
       console.warn(`No measurement data for ${day}`);
       console.debug((<Error>err).stack);
-      try {
-        await page.screenshot({
-          path: `/app/export/.error_${moment().format(
-            'YYYY-MM-DD_hh-mm-ss'
-          )}_${new Date().getTime()}.png`,
-        });
-      } catch {}
+      if (this.config.debug) {
+        try {
+          await page.screenshot({
+            path: `/app/export/.error_${moment().format(
+              'YYYY-MM-DD_hh-mm-ss'
+            )}_${new Date().getTime()}.png`,
+          });
+        } catch {}
+      }
       return false;
     }
 
@@ -426,6 +429,7 @@ async function main() {
       influxUrl: process.env.INFLUX_URL!,
       username: process.env.USERNAME!,
       password: process.env.PASSWORD!,
+      debug: options.debug,
     };
 
     const influxDb = new InfluxDB({
