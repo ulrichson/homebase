@@ -440,7 +440,7 @@ async function main() {
     const bot = new Bot(config, influxDb);
 
     for (const key of Object.keys(config)) {
-      if (!config[key as keyof Config]) {
+      if (!config[key as keyof Config] && key !== 'debug') {
         throw new Error(
           `Missing environment variable ${key
             .replace(/[A-Z]/g, (letter) => `_${letter}`)
