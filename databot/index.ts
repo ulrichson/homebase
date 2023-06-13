@@ -114,16 +114,16 @@ class Bot {
 
     console.debug('Select "Viertelstundenwerte"');
     await page.click(
-      'label[for="myForm1\\:j_idt1247\\:grid_eval\\:selectedClass\\:1"]'
+      'label[for="myForm1\\:j_idt1259\\:grid_eval\\:selectedClass\\:1"]'
     );
     await page.waitForSelector(
-      'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+      'label[for="myForm1\\:j_idt1282\\:j_idt1287\\:selectedClass\\:0"]'
     );
 
     // For some reason selecting the radio button does not work before date selection
     // console.debug('Select "Energiemenge in kWh"');
     // await page.click(
-    //   'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:0"]'
+    //   'label[for="myForm1\\:j_idt1282\\:j_idt1287\\:selectedClass\\:0"]'
     // );
 
     console.debug('Enter date range');
@@ -159,7 +159,7 @@ class Bot {
 
       console.debug('Select "Leistung in kW"');
       page.click(
-        'label[for="myForm1\\:j_idt1270\\:j_idt1275\\:selectedClass\\:1'
+        'label[for="myForm1\\:j_idt1282\\:j_idt1287\\:selectedClass\\:1'
       );
       await page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
