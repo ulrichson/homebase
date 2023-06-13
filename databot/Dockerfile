@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     cron \
     python3\
     python3-pip \
+    python3-venv \
+    python3-dev \
     chromium
 
 # RUN groupadd -r appuser && useradd -rm -g appuser -G audio,video appuser
@@ -29,6 +31,9 @@ WORKDIR /app
 
 # Install python dependencies
 # RUN python3 -m pip3 install --upgrade pip
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN pip3 install -r requirements.txt
 
 # Install node dependencies and install
