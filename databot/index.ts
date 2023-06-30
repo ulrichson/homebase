@@ -113,23 +113,19 @@ class Bot {
     );
 
     console.debug('Select "Viertelstundenwerte"');
-    await page.click(
-      'label[for="myForm1\\:j_idt1124\\:grid_eval\\:selectedClass\\:1"]'
-    );
-    await page.waitForSelector(
-      'label[for="myForm1\\:j_idt1147\\:j_idt1152\\:selectedClass\\:0"]'
-    );
+    await page.click('label::-p-text(Viertelstundenwerte)');
+    await page.waitForSelector('label::-p-text(Energiemenge in kWh)');
 
-    // For some reason selecting the radio button does not work before date selection
-    // console.debug('Select "Energiemenge in kWh"');
-    // await page.click(
-    //   'label[for="myForm1\\:j_idt1147\\:j_idt1152\\:selectedClass\\:0"]'
-    // );
-
-    console.debug('Enter date range');
-    const input = await page.$('#myForm1\\:calendarFromRegion');
-    await input?.click({ clickCount: 2 });
-    await input?.type(day);
+    console.debug('Enter date range ' + day);
+    await new Promise((r) => setTimeout(r, 500));
+    const inputFrom = await page.$('#myForm1\\:calendarFromRegion');
+    await inputFrom?.click({ clickCount: 2 });
+    await inputFrom?.type(day);
+    await page.keyboard.press('Enter');
+    await new Promise((r) => setTimeout(r, 500));
+    const inputTo = await page.$('#myForm1\\:calendarToRegion');
+    await inputTo?.click({ clickCount: 2 });
+    await inputTo?.type(day);
     await page.keyboard.press('Enter');
     await new Promise((r) => setTimeout(r, 500));
 
@@ -152,20 +148,18 @@ class Bot {
     try {
       console.debug('Select "Energiemenge in kWh"');
       // No need to click, it's pre-selected
-      // page.click('label[for="myForm1:j_idt1270:j_idt1275:selectedClass:0"]');
+      // page.click('label::-p-text(Energiemenge in kWh)');
       const meteredValuesDataTable = await this.downloadResult(
         page /*'Energiemenge'*/
       );
 
       console.debug('Select "Leistung in kW"');
-      page.click(
-        'label[for="myForm1\\:j_idt1147\\:j_idt1152\\:selectedClass\\:1'
-      );
+      page.click('label::-p-text(Leistung in kW)');
       await page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
       console.debug('Reset pagination');
-      page.click('.ui-paginator-pages > .ui-paginator-page:first-child');
+      page.click('.ui-paginator-first');
       await page.waitForResponse((response) => {
         return response.request().url().includes('/consumption.jsf');
       });
@@ -249,7 +243,7 @@ class Bot {
 
     console.debug('Click "Anzeigen"');
     // await page.waitForSelector('#myForm1\\:btnIdA1', { visible: true });
-    await page.click('#myForm1\\:btnIdA1'); // Button "Anzeigen"
+    await page.click('input[value="Anzeigen"]'); // Button "Anzeigen"
 
     console.debug('Wait for result');
     await page.waitForResponse((response) => {
