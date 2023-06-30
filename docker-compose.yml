@@ -4,7 +4,7 @@ services:
   databot:
     # platform: linux/arm64/v8
     # build: ./databot
-    image: ghcr.io/ulrichson/homebase:main
+    image: ghcr.io/ulrichson/homebase-databot:main
     container_name: databot
     environment:
       - INFLUX_URL=http://influxdb:8086
