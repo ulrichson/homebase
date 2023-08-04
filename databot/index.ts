@@ -72,13 +72,14 @@ class Bot {
    *
    * @returns Whether the data was loaded successfully
    */
-  async load(day: string) {
+  async load(day: string): Promise<number> {
+    let ret = 0;
     const browser = isDocker()
       ? await puppeteer.launch({
           executablePath: '/usr/bin/chromium',
           args: ['--no-sandbox', '--disable-setuid-sandbox'],
         })
-      : await puppeteer.launch({ headless: false });
+      : await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
 
     page.on('console', (msg) => console.debug('BROWSER DEBUG: ', msg.text()));
@@ -188,6 +189,7 @@ class Bot {
             .floatField('value', row[valueKey] ?? row[substituteValueKey]);
         }),
       ];
+      ret = data.length;
       const writeApi = this.influxDb.getWriteApi(
         this.config.influxOrg,
         this.config.influxBucket,
@@ -212,7 +214,7 @@ class Bot {
           });
         } catch {}
       }
-      return false;
+      return 0;
     }
 
     try {
@@ -231,7 +233,7 @@ class Bot {
       console.debug((<Error>err).stack);
     }
 
-    return true;
+    return ret;
   }
 
   private async downloadResult(
@@ -334,21 +336,37 @@ class Bot {
 }
 
 async function main() {
-  async function migrate({ bot, config }: { bot: Bot; config: Config }) {
+  async function migrate({
+    bot,
+    config,
+    limitDaysBack,
+  }: {
+    bot: Bot;
+    config: Config;
+    limitDaysBack?: number;
+  }) {
     let deltaDays = 1;
     let hasNext = true;
     const maxFailedAttempts = 3;
     let failedAttempts = 0;
-    let allowedEmptyDays = 7;
-    console.info('Starting migrating old measurements');
+    let allowedIncompleteDays = 7;
+    console.info(
+      'Starting migrating old measurements' +
+        (typeof limitDaysBack !== 'undefined'
+          ? ` of last ${limitDaysBack} day${limitDaysBack !== 1 ? 's' : ''}`
+          : '')
+    );
     while (hasNext) {
       const day = moment()
         .tz(config.tz)
         .subtract(deltaDays, 'days')
         .format(dateFormat);
       try {
-        if (!(await bot.load(day))) {
-          allowedEmptyDays -= 1;
+        if (
+          (await bot.load(day)) !==
+          24 /* hours a day */ * 4 /* quarter hours */ * 2 /* data rows */
+        ) {
+          allowedIncompleteDays -= 1;
         }
         deltaDays += 1;
       } catch (err) {
@@ -356,8 +374,12 @@ async function main() {
         console.error(err);
       }
 
-      if (failedAttempts >= maxFailedAttempts || allowedEmptyDays < 0) {
+      if (failedAttempts >= maxFailedAttempts || allowedIncompleteDays < 0) {
         console.debug('Stopping migration since no more data is present');
+        hasNext = false;
+      }
+
+      if (typeof limitDaysBack !== 'undefined' && deltaDays > limitDaysBack) {
         hasNext = false;
       }
     }
@@ -399,6 +421,10 @@ async function main() {
     const program = new Command();
     program
       .option('-m, --migrate', 'Migrate old measurement data into DB', false)
+      .option(
+        '-l, --limit <number>',
+        'Limit migration to number of days (default: migration goes back until no data is present)'
+      )
       .option('-c, --config <path>', 'Path to config file')
       .option('-d, --debug', 'Enable debug logging', false)
       .parse();
@@ -444,7 +470,7 @@ async function main() {
     }
 
     if (options.migrate) {
-      await migrate({ bot, config });
+      await migrate({ bot, config, limitDaysBack: options.limit ?? undefined });
     } else {
       await update({ bot, config, influxDb });
     }
