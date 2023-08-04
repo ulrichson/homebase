@@ -2,6 +2,82 @@
 
 Raspberry Pi based home monitoring dashboard
 
+## Run
+
+```bash
+docker compose up --build
+```
+
+## Develop
+
+Run scripts direclty:
+
+```bash
+cd ./databot
+LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
+```
+
+```bash
+cd ./databot
+INFLUX_URL=http://localhost:8086 ts-node index.ts -c ../.env -d
+```
+
+For some reason the `pipenv` in the Docker environment won't work. Thus a `requirements.txt` file is used. To update it run `pipenv run pip freeze > requirements.txt`.
+
+## Commands
+
+### Migrate data
+
+Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
+
+```bash
+docker compose run --rm databot databot --migrate
+```
+
+### Archive previous week charts
+
+This task is performed automatically via a cron job
+
+```bash
+docker compose run --rm databot python3 render.py --archive
+```
+
+## Flux queries
+
+Query all data:
+
+```
+from(bucket: "smartmeter")
+  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+```
+
+Split in 6h time windows:
+
+```
+from(bucket: "smartmeter")
+  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+  |> aggregateWindow(every: 6h, offset: -12h, fn: mean)
+```
+
+```
+from(bucket: "smartmeter")
+  |> range(start: time(v: "2022-07-10T23:45:00Z"), stop: time(v: "2022-07-18T00:00:00Z"))
+  |> filter(fn: (r) =>
+    r._measurement == "meteredValues" and
+    r._field == "value"
+  )
+  //|> aggregateWindow(every: 6h, createEmpty: false, offset: -12h, fn: mean)
+  //|> count()
+```
+
 ## Setup
 
 ### Raspberry Pi
@@ -141,79 +217,3 @@ The variables `INFLUX_BUCKET` and `DOCKER_INFLUXDB_INIT_BUCKET` must have the sa
 - [https://wiki.mobileread.com/wiki/Kindle_Serial_Numbers](https://wiki.mobileread.com/wiki/Kindle_Serial_Numbers)
 - [Kindle Touch/PW1/PW2 5.0.x - 5.4.4.2 JailBreak. Plus FW 5.x USBNetwork.](https://www.mobileread.com/forums/showthread.php?t=186645)
 - [Kindle Touch Hacking](https://wiki.mobileread.com/wiki/Kindle_Touch_Hacking#CURRENT_UNIVERSAL_METHOD)
-
-## Run
-
-```bash
-docker compose up --build
-```
-
-## Develop
-
-Run scripts direclty:
-
-```bash
-cd ./databot
-LOGLEVEL=DEBUG INFLUX_URL=http://localhost:8086 PIPENV_DOTENV_LOCATION=../.env pipenv run python3 render.py
-```
-
-```bash
-cd ./databot
-INFLUX_URL=http://localhost:8086 ts-node index.ts -c ../.env -d
-```
-
-For some reason the `pipenv` in the Docker environment won't work. Thus a `requirements.txt` file is used. To update it run `pipenv run pip freeze > requirements.txt`.
-
-## Commands
-
-### Migrate data
-
-Although a migration is performed when smartmeter data is fetched the first time, you can trigger a manual migration with following command:
-
-```bash
-docker compose run --rm databot databot --migrate
-```
-
-### Archive previous week charts
-
-This task is performed automatically via a cron job
-
-```bash
-docker compose run --rm databot python3 render.py --archive
-```
-
-## Flux queries
-
-Query all data:
-
-```
-from(bucket: "smartmeter")
-  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
-  |> filter(fn: (r) =>
-    r._measurement == "meteredValues" and
-    r._field == "value"
-  )
-```
-
-Split in 6h time windows:
-
-```
-from(bucket: "smartmeter")
-  |> range(start: v.timeRangeStart, stop:v.timeRangeStop)
-  |> filter(fn: (r) =>
-    r._measurement == "meteredValues" and
-    r._field == "value"
-  )
-  |> aggregateWindow(every: 6h, offset: -12h, fn: mean)
-```
-
-```
-from(bucket: "smartmeter")
-  |> range(start: time(v: "2022-07-10T23:45:00Z"), stop: time(v: "2022-07-18T00:00:00Z"))
-  |> filter(fn: (r) =>
-    r._measurement == "meteredValues" and
-    r._field == "value"
-  )
-  //|> aggregateWindow(every: 6h, createEmpty: false, offset: -12h, fn: mean)
-  //|> count()
-```
