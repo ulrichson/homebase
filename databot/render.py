@@ -310,7 +310,6 @@ def main():
     try:
         if args.clean:
             clean()
-
         if args.archive:
             archive()
         else:
