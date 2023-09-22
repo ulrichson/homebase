@@ -54,10 +54,14 @@ RUN chmod +x /app/index.js
 
 # USER appuser
 
-# Load and render smartmeter data every 5 minutes
-RUN crontab -l | { cat; echo "*/5 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
+# Load and render smartmeter data every 30 minutes
+RUN crontab -l | { cat; echo "*/30 * * * * /bin/bash /app/cron_current.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
 
 # Archive charts weekly (at 00:00 on Thursday)
 RUN crontab -l | { cat; echo "0 0 * * 4 /bin/bash /app/cron_archive.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
+
+# Run integrity jobs once a day at 00:00
+RUN crontab -l | { cat; echo "0 0 * * * /bin/bash /app/cron_integrity.sh > /proc/1/fd/1 2>/proc/1/fd/2"; } | crontab -
+
 
 CMD [ "/app/start.sh" ]
