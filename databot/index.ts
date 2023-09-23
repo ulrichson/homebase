@@ -639,38 +639,41 @@ async function doctor({
         }
         let hasErrors = false;
 
-        data
-          ?.filter((row) => (<any>row).name === 'meteredValues')
-          .forEach((row) => {
-            const key = DateTime.fromJSDate(
-              new Date((<any>row).time.toString())
-            )
-              .toUTC()
-              .toFormat(format);
-            // console.log(key + ': ', res.get(key));
-            // if (dbResult.get(key)) {
-            //   console.log(
-            //     `Matched - ${key} = ${dbResult.get(key)} vs. ${Number(
-            //       row.fields.value
-            //     )}`
-            //   );
-            // }
-            const dbVal = ('' + dbResult.get(key)).trim();
-            const webVal = ('' + row.fields.value).trim();
-            if (dbResult.has(key)) {
-              if (dbVal != webVal) {
-                console.warn(
-                  `Mismatch DB/web on ${key}:\t${dbVal}\tvs.\t${webVal}`
-                );
-                hasErrors ||= true;
-              }
-            } else {
-              console.log(`${key} not found in DB`);
+        const meteredValues = data?.filter(
+          (row) => (<any>row).name === 'meteredValues'
+        );
+        meteredValues?.forEach((row) => {
+          const key = DateTime.fromJSDate(new Date((<any>row).time.toString()))
+            .toUTC()
+            .toFormat(format);
+          // console.log(key + ': ', res.get(key));
+          // if (dbResult.get(key)) {
+          //   console.log(
+          //     `Matched - ${key} = ${dbResult.get(key)} vs. ${Number(
+          //       row.fields.value
+          //     )}`
+          //   );
+          // }
+          const dbVal = ('' + dbResult.get(key)).trim();
+          const webVal = ('' + row.fields.value).trim();
+          if (dbResult.has(key)) {
+            if (dbVal != webVal) {
+              console.warn(
+                `Mismatch DB/web on ${key}:\t${dbVal}\tvs.\t${webVal}`
+              );
+              hasErrors ||= true;
             }
-          });
+          } else {
+            console.log(`${key} not found in DB`);
+          }
+        });
 
         if (!hasErrors) {
           console.log('Everything is OK on ' + day);
+        }
+
+        if (!meteredValues?.length) {
+          console.warn(`No data to check against DB on ${day}`);
         }
       }
 
