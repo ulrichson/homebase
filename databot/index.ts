@@ -564,6 +564,7 @@ async function doctor({
       `Starting integrity check back from ${dt
         .clone()
         .subtract(1, 'weeks')
+        .add(1, 'day')
         .format(dateFormat)}`
     );
 
