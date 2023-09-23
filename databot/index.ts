@@ -560,7 +560,12 @@ async function doctor({
     //   dt.add(1, 'days');
     // }
 
-    console.log(`Starting integrity check back from ${dt.format(dateFormat)}`);
+    console.log(
+      `Starting integrity check back from ${dt
+        .clone()
+        .subtract(1, 'weeks')
+        .format(dateFormat)}`
+    );
 
     let weeksBack = 1;
     let hasNext = true;
@@ -620,11 +625,15 @@ async function doctor({
             console.log(`Retrying for ${day} ...`);
           }
           await sleep(failedAttempts > 0 ? 5000 : 300); // Avoid rate limiting
-          data = await bot.fetch(day);
-          if (data == null) {
+          try {
+            data = await bot.fetch(day);
+            if (data == null) {
+              failedAttempts++;
+            } else {
+              failedAttempts = 0;
+            }
+          } catch {
             failedAttempts++;
-          } else {
-            failedAttempts = 0;
           }
         }
         let hasErrors = false;
