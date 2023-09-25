@@ -425,7 +425,10 @@ async function migrate({
       allowedEmptyDays -= 1;
       deltaDays += 1;
       failedAttempts = 0;
-    } else if (result > 0) {
+    } else if (
+      result ===
+      24 /* hours a day */ * 4 /* quarter hours */ * 2 /* data rows */
+    ) {
       deltaDays += 1;
       failedAttempts = 0;
     } else {
