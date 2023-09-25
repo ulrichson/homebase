@@ -509,7 +509,6 @@ async function update({
     let failedAttempts = 0;
     while (dt <= endOfToday && failedAttempts <= maxFailedAttempts) {
       const day = dt.format(dateFormat);
-      console.log(day, endOfToday.format(dateFormat));
       if (failedAttempts > 0) {
         console.log(`Fetching measurements for ${day} failed, will retry ...`);
       }
