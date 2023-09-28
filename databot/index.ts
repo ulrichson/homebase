@@ -275,12 +275,21 @@ class Bot {
           waitUntil: 'domcontentloaded',
         }
       );
-      await browser.close();
 
       console.debug('Logout successful');
     } catch (err) {
       console.warn(`Cannot logout`);
       console.debug((<Error>err).stack);
+    } finally {
+      try {
+        await browser.close();
+      } catch (err) {
+        console.warn(`Cannot close browser`);
+        console.debug((<Error>err).stack);
+      } finally {
+        // Kill browser if it is still running
+        browser.process()?.kill('SIGINT');
+      }
     }
 
     return ret;
