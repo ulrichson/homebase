@@ -311,9 +311,9 @@ def main():
     try:
         if args.clean:
             clean()
-        if args.archive:
+        elif args.archive:
             archive()
-        if args.day:
+        elif args.day:
 
             try:
                 day = datetime.strptime(args.day, '%d.%m.%Y')
