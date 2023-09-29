@@ -314,15 +314,15 @@ def main():
         if args.archive:
             archive()
         if args.day:
-            date_format = '%d.%m.%Y'
 
             try:
-                day = datetime.strptime(args.day, date_format)
+                day = datetime.strptime(args.day, '%d.%m.%Y')
                 logging.info(f'should load {args.day}')
             except:
                 raise Exception(
                     'Cannot parse argument, format must be DD.MM.YYYY')
 
+            date_format = '%Y-%m-%d'
             date = day - timedelta(weeks=1)
             start = date - timedelta(days=date.weekday())
             stop = start + timedelta(days=6)
