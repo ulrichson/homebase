@@ -323,8 +323,7 @@ def main():
                     'Cannot parse argument, format must be DD.MM.YYYY')
 
             date_format = '%Y-%m-%d'
-            date = day - timedelta(weeks=1)
-            start = date - timedelta(days=date.weekday())
+            start = day - timedelta(days=day.weekday())
             stop = start + timedelta(days=6)
             filename = f'{meter_id}_{start.strftime(date_format)}-{stop.strftime(date_format)}.png'
             render(date=stop, filename=filename,
