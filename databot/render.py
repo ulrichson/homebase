@@ -305,6 +305,7 @@ def main():
                         action='store_true', help='Archive previous charts')
     parser.add_argument('-c', '--clean', default=False,
                         action='store_true', help='Clean previous charts')
+    parser.add_argument('-d', '--day', type=str, help='Load specific day')
     args = parser.parse_args()
 
     try:
@@ -312,6 +313,22 @@ def main():
             clean()
         if args.archive:
             archive()
+        if args.day:
+            date_format = '%d.%m.%Y'
+
+            try:
+                day = datetime.strptime(args.day, date_format)
+                logging.info(f'should load {args.day}')
+            except:
+                raise Exception(
+                    'Cannot parse argument, format must be DD.MM.YYYY')
+
+            date = day - timedelta(weeks=1)
+            start = date - timedelta(days=date.weekday())
+            stop = start + timedelta(days=6)
+            filename = f'{meter_id}_{start.strftime(date_format)}-{stop.strftime(date_format)}.png'
+            render(date=stop, filename=filename,
+                   title_suffix=f' {start.strftime(date_format)} - {stop.strftime(date_format)}')
         else:
             render()
 

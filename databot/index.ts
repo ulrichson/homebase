@@ -720,6 +720,7 @@ async function main() {
         '--continue-migration',
         'Continues migration from furthest measurement in the past'
       )
+      .option('-l, --load <DD.MM.YYYY>', 'Store a specific day in the DB')
       .parse();
 
     const options = program.opts();
@@ -773,6 +774,17 @@ async function main() {
       });
     } else if (options.continueMigration) {
       await continueMigration({ bot, config, influxDb });
+    } else if (options.load) {
+      if (!moment(options.load, dateFormat, true).isValid()) {
+        throw new Error('Cannot parse argument, format must be DD.MM.YYYY');
+      }
+      const day = options.load;
+      const result = await bot.load(day);
+      if (result < 0) {
+        throw new Error(
+          `Scraping data failed for ${day}, please try again later ...`
+        );
+      }
     } else {
       await update({ bot, config, influxDb });
     }
