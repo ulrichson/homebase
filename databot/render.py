@@ -252,6 +252,7 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     img.save(base_path + filename)
 
     logging.info(f'Rendering chart {date_str} done')
+    plt.close()
 
     return True
 
@@ -314,7 +315,6 @@ def main():
         elif args.archive:
             archive()
         elif args.day:
-
             try:
                 day = datetime.strptime(args.day, '%d.%m.%Y')
                 logging.info(f'should load {args.day}')
