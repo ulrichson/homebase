@@ -64,7 +64,8 @@ def get_line_chart_values(weeks_back, date):
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")' \
         f'|> aggregateWindow(every: 1h, createEmpty: false, offset: {offset}, fn: sum)'
 
-    # logging.info(f'Query:\n\t{flux_query}')
+    logging.debug(
+        f'Query get_line_chart_values (weeks_back={str(weeks_back)}, date={str(date)}):\n{flux_query}')
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
@@ -85,7 +86,8 @@ def get_bar_chart_values(weeks_back, date):
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
         f'|> aggregateWindow(every: 6h, createEmpty: false, offset: {offset}, fn: sum)'
 
-    # logging.info(f'Query:\n\t{flux_query}')
+    logging.debug(
+        f'Query get_bar_chart_values (weeks_back={str(weeks_back)}, date={str(date)}):\n{flux_query}')
 
     response = query_api.query(flux_query)
     if len(response) == 0 or len(response[0].records) == 0:
@@ -102,16 +104,24 @@ def get_ytd_statistics(date):
     start = pytz.timezone(tz).localize(
         datetime(date.year, 1, 1)).astimezone(pytz.UTC)
     stop = pytz.timezone(tz).localize(date).astimezone(pytz.UTC)
-    response_mean = query_api.query(f'from(bucket: "{bucket}") '
-                                    f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) '
-                                    f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") '
-                                    f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)'
-                                    f'|> mean()')
-    response_sum = query_api.query(f'from(bucket: "{bucket}") '
-                                   f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) '
-                                   f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") '
-                                   f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)'
-                                   f'|> sum()')
+    flux_query_mean = f'from(bucket: "{bucket}") ' \
+        f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
+        f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
+        f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)' \
+        f'|> mean()'
+    response_mean = query_api.query(flux_query_mean)
+    flux_query_sum = f'from(bucket: "{bucket}") ' \
+        f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
+        f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
+        f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)' \
+        f'|> sum()'
+    response_sum = query_api.query(flux_query_sum)
+
+    logging.debug(
+        f'Query get_ytd_statistics mean (date={str(date)}):\n{flux_query_mean}')
+    logging.debug(
+        f'Query get_ytd_statistics sum (date={str(date)}):\n{flux_query_sum}')
+
     return response_mean[0].records[0].get_value(), response_sum[0].records[0].get_value()
 
 
