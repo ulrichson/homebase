@@ -38,10 +38,12 @@ function isDocker() {
   return hasDockerEnv() || hasDockerCGroup();
 }
 
-function getDatetimeRange(weeksBack: number, date: DateTime, tz: string) {
+function getDatetimeRange(weeksBack: number, date: DateTime) {
   const format = "yyyy-MM-dd'T'HH:mm:ss'Z'";
   date = date.set({ hour: 0, minute: 0, second: 0, millisecond: 0 });
-  const start = date.minus({ days: date.weekday, weeks: weeksBack });
+  const start = date
+    .minus({ days: date.weekday, weeks: weeksBack })
+    .plus({ day: 1 });
   const stop = start.plus({ weeks: 1 });
   return {
     start: start.toUTC().toFormat(format),
@@ -546,37 +548,51 @@ async function doctor({
   config,
   influxDb,
   limitDaysBack,
+  from,
 }: {
   bot: Bot;
   config: Config;
   influxDb: InfluxDB;
   limitDaysBack?: number;
+  from?: Moment;
 }) {
   try {
     const queryApi = influxDb.getQueryApi(config.influxOrg);
-    let fluxQuery = `
+    let dt = from?.clone();
+    if (dt) {
+      const { stop } = getDatetimeRange(0, DateTime.fromJSDate(dt.toDate()));
+      console.log(stop);
+      dt = moment(stop); //.tz(config.tz);
+    } else {
+      const fluxQuery = `
       from(bucket: "${config.influxBucket}")
       |> range(start: 0)
       |> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")
       |> last()
     `;
-    let response: any[] = await queryApi.collectRows(fluxQuery);
-    if (response.length === 0) {
-      console.log('No data present in DB to check');
-      return;
+      const response: any[] = await queryApi.collectRows(fluxQuery);
+      if (response.length === 0) {
+        console.log('No data present in DB to check');
+        return;
+      }
+      dt = moment((<any>response[0])['_time']).tz(config.tz);
     }
-    let dt = moment((<any>response[0])['_time']).tz(config.tz);
     // while (dt <= moment().tz(config.tz)) {
     //   await bot.load(dt.format(dateFormat));
     //   dt.add(1, 'days');
     // }
 
     console.log(
-      `Starting integrity check back from ${dt
-        .clone()
-        .subtract(1, 'weeks')
-        .add(1, 'day')
-        .format(dateFormat)}`
+      `Starting integrity check back from ${moment
+        .tz(dt, config.tz)
+        .subtract(1, 'day')
+        .format(dateFormat)}${
+        typeof limitDaysBack !== 'undefined'
+          ? ` for at least ${limitDaysBack} day${
+              limitDaysBack === 1 ? '' : 's'
+            } back (rounded to complete weeks)`
+          : ''
+      }`
     );
 
     let weeksBack = 1;
@@ -588,18 +604,17 @@ async function doctor({
       // Check data in weekly chunks and compare it data
       const { start, stop, format } = getDatetimeRange(
         weeksBack,
-        DateTime.fromJSDate(dt.toDate()),
-        config.tz
+        DateTime.fromJSDate(dt.toDate())
       );
 
-      fluxQuery = `
+      const fluxQuery = `
         from(bucket: "${config.influxBucket}")
           |> range(start: ${start}, stop: ${stop})
           |> filter(fn: (r) =>  r._measurement == "meteredValues" and r._field == "value")
           |> aggregateWindow(every: 15m, offset: 1ns, fn: mean)
       `;
       // console.log(fluxQuery);
-      response = await queryApi.collectRows(fluxQuery);
+      const response = await queryApi.collectRows(fluxQuery);
       // console.log({
       //   response: response.map(
       //     (r: any) =>
@@ -684,7 +699,7 @@ async function doctor({
         }
 
         if (!meteredValues?.length) {
-          console.warn(`No data to check against DB on ${day}`);
+          console.warn(`No data scrapped to check against DB on ${day}`);
         }
       }
 
@@ -711,11 +726,14 @@ async function main() {
       .option('-m, --migrate', 'Migrate old measurement data into DB', false)
       .option(
         '-l, --limit <number>',
-        'Limit migration to number of days (default: migration goes back until no data is present)'
+        'Limit to number of days (default: go back until no data is present)'
       )
       .option('-c, --config <path>', 'Path to config file')
       .option('-d, --debug', 'Enable debug logging', false)
-      .option('--doctor', 'Check measurements integrity')
+      .option(
+        '--doctor <DD.MM.YYYY>',
+        'Check measurements integrity (from an optional date backward, and can be used with --limit)'
+      )
       .option(
         '--continue-migration',
         'Continues migration from furthest measurement in the past'
@@ -771,6 +789,9 @@ async function main() {
         config,
         influxDb,
         limitDaysBack: options.limit ?? undefined,
+        from: moment(options.doctor, dateFormat, true).isValid()
+          ? moment(options.doctor, dateFormat, true).tz(config.tz)
+          : undefined,
       });
     } else if (options.continueMigration) {
       await continueMigration({ bot, config, influxDb });
