@@ -731,7 +731,7 @@ async function main() {
       .option('-c, --config <path>', 'Path to config file')
       .option('-d, --debug', 'Enable debug logging', false)
       .option(
-        '--doctor <DD.MM.YYYY>',
+        '--doctor [DD.MM.YYYY]',
         'Check measurements integrity (from an optional date backward, and can be used with --limit)'
       )
       .option(
