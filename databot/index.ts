@@ -115,7 +115,7 @@ class Bot {
         's'
       );
       writeApi.writePoints(data);
-      writeApi.close();
+      await writeApi.close();
       console.info(`Stored measurements in DB for ${day}`);
     } catch {
       return -1;
