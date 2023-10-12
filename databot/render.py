@@ -62,7 +62,7 @@ def get_line_chart_values(weeks_back, date):
     flux_query = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start}"), stop: time(v: "{stop}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value")' \
-        f'|> aggregateWindow(every: 1h, createEmpty: true, offset: {offset}, fn: sum)'
+        f'|> aggregateWindow(every: 1h, createEmpty: false, offset: {offset}, fn: sum)'
 
     logging.debug(
         f'Query get_line_chart_values (weeks_back={str(weeks_back)}, date={str(date)}):\n{flux_query}')
@@ -84,7 +84,7 @@ def get_bar_chart_values(weeks_back, date):
     flux_query = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start}"), stop: time(v: "{stop}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
-        f'|> aggregateWindow(every: 6h, createEmpty: true, offset: {offset}, fn: sum)'
+        f'|> aggregateWindow(every: 6h, createEmpty: false, offset: {offset}, fn: sum)'
 
     logging.debug(
         f'Query get_bar_chart_values (weeks_back={str(weeks_back)}, date={str(date)}):\n{flux_query}')
@@ -107,13 +107,13 @@ def get_ytd_statistics(date):
     flux_query_mean = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
-        f'|> aggregateWindow(every: 24h, createEmpty: true, fn: sum)' \
+        f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)' \
         f'|> mean()'
     response_mean = query_api.query(flux_query_mean)
     flux_query_sum = f'from(bucket: "{bucket}") ' \
         f'|> range(start: time(v: "{start.strftime("%Y-%m-%dT%H:%M:%SZ")}"), stop: time(v: "{stop.strftime("%Y-%m-%dT%H:%M:%SZ")}")) ' \
         f'|> filter(fn: (r) => r._measurement == "meteredValues" and r._field == "value") ' \
-        f'|> aggregateWindow(every: 24h, createEmpty: true, fn: sum)' \
+        f'|> aggregateWindow(every: 24h, createEmpty: false, fn: sum)' \
         f'|> sum()'
     response_sum = query_api.query(flux_query_sum)
 
