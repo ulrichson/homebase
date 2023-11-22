@@ -109,14 +109,16 @@ class Bot {
       //     .map((row) => `${(<any>row).time}: ${row.fields.value}`)
       // );
       ret = data.length;
-      const writeApi = this.influxDb.getWriteApi(
-        this.config.influxOrg,
-        this.config.influxBucket,
-        's'
-      );
-      writeApi.writePoints(data);
-      await writeApi.close();
-      console.info(`Stored measurements in DB for ${day}`);
+      if (ret) {
+        const writeApi = this.influxDb.getWriteApi(
+          this.config.influxOrg,
+          this.config.influxBucket,
+          's'
+        );
+        writeApi.writePoints(data);
+        await writeApi.close();
+        console.info(`Stored measurements in DB for ${day}`);
+      }
     } catch {
       return -1;
     }
@@ -219,10 +221,11 @@ class Bot {
         return response.request().url().includes('/consumption.jsf');
       });
       console.debug('Reset pagination');
+      const resetPagiationLink = await page.$('.ui-paginator-first');
       const disabledResetPagiationLink = await page.$(
         '.ui-paginator-first.ui-state-disabled'
       );
-      if (!disabledResetPagiationLink) {
+      if (resetPagiationLink && !disabledResetPagiationLink) {
         await page.click('.ui-paginator-first');
         await page.waitForResponse((response) => {
           return response.request().url().includes('/consumption.jsf');
@@ -256,7 +259,9 @@ class Bot {
       ret = data;
     } catch (err) {
       console.warn(`No measurement data for ${day}`);
-      console.debug((<Error>err).stack);
+      if ((<Error>err).stack) {
+        console.debug((<Error>err).stack);
+      }
       if (this.config.debug) {
         try {
           await page.screenshot({
@@ -333,6 +338,12 @@ class Bot {
       tableData.headers = pageTableData.headers;
       tableData.rows.push(...pageTableData.rows);
 
+      // Exit early
+      if (tableData.rows.length === 0) {
+        hasNext = false;
+        continue;
+      }
+
       const nextButton = await page.$(
         '#myForm1\\:consumptionsTable_paginator_bottom a.ui-paginator-next'
       );
@@ -360,41 +371,46 @@ class Bot {
     page: Page,
     tableSelector: string
   ): Promise<TableData> {
-    const table = (await page.$$(tableSelector))[0];
-    const thead = await table.$('thead');
-    const tbody = await table.$('tbody');
-    const ths = await thead!.$$('th');
-    const trs = await tbody!.$$('tr');
-    const rows: TableRow[] = [];
-    const headers: string[] = [];
-    for (const th of ths) {
-      const thText = await (await th.getProperty('textContent')).jsonValue();
-      headers.push(thText?.trim() ?? 'N/A');
+    try {
+      const table = (await page.$$(tableSelector))[0];
+      const thead = await table.$('thead');
+      const tbody = await table.$('tbody');
+      const ths = await thead!.$$('th');
+      const trs = await tbody!.$$('tr');
+      const rows: TableRow[] = [];
+      const headers: string[] = [];
+      for (const th of ths) {
+        const thText = await (await th.getProperty('textContent')).jsonValue();
+        headers.push(thText?.trim() ?? 'N/A');
+      }
+      for (const tr of trs) {
+        const tds = await tr.$$eval('td', (tds) =>
+          tds.map((td) => td.textContent!.trim())
+        );
+        rows.push(
+          headers.reduce((acc, th, index) => {
+            const number = Number(tds[index].replace(',', '.'));
+            const date = moment
+              .tz(tds[index], 'DD.MM.YYYY hh:mm', this.config.tz)
+              .toDate();
+            acc[th] = !tds[index]
+              ? null
+              : !Number.isNaN(number)
+              ? number
+              : !Number.isNaN(date.getTime())
+              ? date
+              : tds[index];
+            return acc;
+          }, {} as TableRow)
+        );
+      }
+      return { headers, rows };
+    } catch {
+      return { headers: [], rows: [] };
     }
-    for (const tr of trs) {
-      const tds = await tr.$$eval('td', (tds) =>
-        tds.map((td) => td.textContent!.trim())
-      );
-      rows.push(
-        headers.reduce((acc, th, index) => {
-          const number = Number(tds[index].replace(',', '.'));
-          const date = moment
-            .tz(tds[index], 'DD.MM.YYYY hh:mm', this.config.tz)
-            .toDate();
-          acc[th] = !tds[index]
-            ? null
-            : !Number.isNaN(number)
-            ? number
-            : !Number.isNaN(date.getTime())
-            ? date
-            : tds[index];
-          return acc;
-        }, {} as TableRow)
-      );
-    }
-    return { headers, rows };
   }
 }
+
 async function migrate({
   bot,
   config,
