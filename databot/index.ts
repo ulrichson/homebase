@@ -117,7 +117,9 @@ class Bot {
         );
         writeApi.writePoints(data);
         await writeApi.close();
-        console.info(`Stored measurements in DB for ${day}`);
+        console.info(
+          `Stored measurements in DB for ${day} (${data.length} pnts)`
+        );
       }
     } catch {
       return -1;
@@ -453,7 +455,7 @@ async function migrate({
       deltaDays += 1;
       failedAttempts = 0;
     } else if (
-      result ===
+      result >=
       24 /* hours a day */ * 4 /* quarter hours */ * 2 /* data rows */
     ) {
       deltaDays += 1;
