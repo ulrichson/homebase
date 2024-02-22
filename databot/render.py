@@ -234,17 +234,17 @@ def render(date=datetime.now(), filename='current.png', title_suffix=''):
     axs3.legend(loc='upper center', bbox_to_anchor=(
         0.5, -0.2), ncol=4, frameon=False, fontsize=6, handlelength=1)
     
-    axs1.set_ylim([0, 5])
-    axs2.set_ylim([0, 5])
-    axs3.set_ylim([0, 5])
+    axs1.set_ylim([0, 6])
+    axs2.set_ylim([0, 6])
+    axs3.set_ylim([0, 6])
 
-    # Remove `0` and `5` tick to avoid layout collisions with neighbor charts
+    # Remove `0` and `6` tick to avoid layout collisions with neighbor charts
     for ax in [axs1, axs2, axs3]:
         ax.yaxis.get_major_ticks()[0].label1.set_visible(False)
         ax.yaxis.get_major_ticks()[0].tick1line.set_visible(False)
 
-        ax.yaxis.get_major_ticks()[5].label1.set_visible(False)
-        ax.yaxis.get_major_ticks()[5].tick1line.set_visible(False)
+        ax.yaxis.get_major_ticks()[6].label1.set_visible(False)
+        ax.yaxis.get_major_ticks()[6].tick1line.set_visible(False)
 
         ax.xaxis.get_minor_ticks()[0].tick1line.set_visible(False)
         ax.xaxis.get_minor_ticks()[1].tick1line.set_visible(False)
